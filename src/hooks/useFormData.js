@@ -144,6 +144,24 @@ export function useFormData() {
     return nonCompliant;
   }, [formData.auditItems]);
 
+  const getNonCompliantWithoutNotes = useCallback(() => {
+    const missing = [];
+    Object.entries(auditSections).forEach(([sectionId, section]) => {
+      section.items.forEach((item) => {
+        const itemData = formData.auditItems[item.id];
+        if (itemData?.status === 'no' && !itemData?.notes?.trim()) {
+          missing.push({
+            sectionId,
+            sectionTitle: section.title,
+            itemId: item.id,
+            itemLabel: item.label,
+          });
+        }
+      });
+    });
+    return missing;
+  }, [formData.auditItems]);
+
   const getIncompleteItems = useCallback(() => {
     const incomplete = [];
     Object.entries(auditSections).forEach(([sectionId, section]) => {
@@ -191,6 +209,7 @@ export function useFormData() {
     getSectionProgress,
     getOverallProgress,
     getNonCompliantItems,
+    getNonCompliantWithoutNotes,
     getIncompleteItems,
     allAuditItemsComplete,
     isFormValid,

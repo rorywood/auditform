@@ -81,6 +81,7 @@ function App() {
     getSectionProgress,
     getOverallProgress,
     getNonCompliantItems,
+    getNonCompliantWithoutNotes,
     getIncompleteItems,
     allAuditItemsComplete,
     isFormValid,
@@ -157,6 +158,15 @@ function App() {
       return;
     }
 
+    // Check for non-compliant items missing notes
+    const missingNotes = getNonCompliantWithoutNotes();
+    if (missingNotes.length > 0) {
+      const first = missingNotes[0];
+      showMessage(`Please add notes for all non-compliant items. "${first.itemLabel}" in ${first.sectionTitle} requires an explanation.`, 'error');
+      setActiveTab(first.sectionId);
+      return;
+    }
+
     // Validate sign-off section
     const { projectManagerName, projectManagerSignature, projectManagerDate } = formData.signoff;
 
@@ -200,12 +210,39 @@ function App() {
 
   const currentTabIndex = tabs.findIndex((tab) => tab.id === activeTab);
 
+  // Check if project info is complete
+  const isProjectInfoComplete = useCallback(() => {
+    const { projectCode, siteName, siteAddress, projectManager, auditor, auditDate } = formData.projectInfo;
+    return !!(projectCode && siteName && siteAddress && projectManager && auditor && auditDate);
+  }, [formData.projectInfo]);
+
+  // Check if a section is complete
+  const isSectionComplete = useCallback((sectionId) => {
+    if (sectionId === 'project') {
+      return isProjectInfoComplete();
+    }
+    if (sectionId === 'signoff') {
+      const { projectManagerName, projectManagerSignature, projectManagerDate } = formData.signoff;
+      return !!(projectManagerName && projectManagerSignature && projectManagerDate);
+    }
+    // For audit sections
+    const progress = getSectionProgress(sectionId);
+    return progress && progress.completed === progress.total;
+  }, [isProjectInfoComplete, formData.signoff, getSectionProgress]);
+
   const goToNextTab = useCallback(() => {
+    // Don't allow progressing past project info until it's complete
+    if (activeTab === 'project' && !isProjectInfoComplete()) {
+      validateForm();
+      showMessage('Please complete all project information before continuing', 'error');
+      return;
+    }
+
     if (currentTabIndex < tabs.length - 1) {
       setActiveTab(tabs[currentTabIndex + 1].id);
       window.scrollTo(0, 0);
     }
-  }, [currentTabIndex]);
+  }, [currentTabIndex, activeTab, isProjectInfoComplete, validateForm, showMessage]);
 
   const goToPreviousTab = useCallback(() => {
     if (currentTabIndex > 0) {
@@ -417,20 +454,34 @@ function App() {
             <span className="text-sm font-medium text-primary">{tabs[currentTabIndex].label}</span>
           </div>
           <div className="mt-2 flex gap-1">
-            {tabs.map((tab, index) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 h-2 rounded-full transition-colors ${
-                  index === currentTabIndex
-                    ? 'bg-primary'
-                    : index < currentTabIndex
-                    ? 'bg-compliant'
-                    : 'bg-gray-200'
-                }`}
-                aria-label={`Go to ${tab.label}`}
-              />
-            ))}
+            {tabs.map((tab, index) => {
+              const isComplete = isSectionComplete(tab.id);
+              const isCurrent = index === currentTabIndex;
+              // Don't allow clicking sections beyond project info if project info is incomplete
+              const canAccess = tab.id === 'project' || isProjectInfoComplete();
+
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    if (!canAccess) {
+                      showMessage('Please complete project information first', 'error');
+                      setActiveTab('project');
+                      return;
+                    }
+                    setActiveTab(tab.id);
+                  }}
+                  className={`flex-1 h-2 rounded-full transition-colors ${
+                    isCurrent
+                      ? 'bg-primary'
+                      : isComplete
+                      ? 'bg-compliant'
+                      : 'bg-gray-200'
+                  }`}
+                  aria-label={`Go to ${tab.label}${isComplete ? ' (Complete)' : ''}`}
+                />
+              );
+            })}
           </div>
         </div>
 
@@ -441,21 +492,37 @@ function App() {
               const progress = ['swms', 'donor', 'cabinet', 'das', 'commissioning', 'contractor'].includes(tab.id)
                 ? getSectionProgress(tab.id)
                 : null;
+              const isComplete = isSectionComplete(tab.id);
+              const canAccess = tab.id === 'project' || isProjectInfoComplete();
 
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => {
+                    if (!canAccess) {
+                      showMessage('Please complete project information first', 'error');
+                      setActiveTab('project');
+                      validateForm();
+                      return;
+                    }
+                    setActiveTab(tab.id);
+                  }}
                   className={`px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors ${
                     activeTab === tab.id
                       ? 'border-b-2 border-primary text-primary bg-white'
+                      : isComplete
+                      ? 'text-compliant border-b-2 border-compliant hover:bg-green-50'
+                      : !canAccess
+                      ? 'text-gray-400 cursor-not-allowed'
                       : 'text-gray-600 hover:text-primary hover:bg-gray-50'
                   }`}
                 >
-                  <span className="mr-2 text-xs text-gray-400">{index + 1}.</span>
+                  <span className={`mr-2 text-xs ${isComplete && activeTab !== tab.id ? 'text-compliant' : 'text-gray-400'}`}>
+                    {isComplete && activeTab !== tab.id ? '✓' : `${index + 1}.`}
+                  </span>
                   {tab.label}
                   {progress && (
-                    <span className="ml-2 text-xs text-gray-400">
+                    <span className={`ml-2 text-xs ${isComplete ? 'text-compliant' : 'text-gray-400'}`}>
                       ({progress.completed}/{progress.total})
                     </span>
                   )}
