@@ -289,7 +289,7 @@ function App() {
                 className="h-12 w-auto"
               />
               <div>
-                <h1 className="text-2xl font-bold text-primary">Project Audit</h1>
+                <h1 className="text-2xl font-bold text-primary">Powertec Projects Audit Form</h1>
                 {formData.projectInfo.siteName && (
                   <p className="text-gray-600 text-sm">
                     {formData.projectInfo.projectCode} - {formData.projectInfo.siteName}

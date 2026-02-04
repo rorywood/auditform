@@ -64,7 +64,7 @@ export async function generateAuditPdf(formData) {
     doc.setTextColor(...PRIMARY_COLOR);
     doc.setFontSize(22);
     doc.setFont('helvetica', 'bold');
-    doc.text('Project Audit Form', pageWidth - margin, 18, { align: 'right' });
+    doc.text('Powertec Projects Audit Form', pageWidth - margin, 18, { align: 'right' });
 
     // Date
     doc.setTextColor(...LIGHT_TEXT);
