@@ -3,12 +3,15 @@ import { useState, useEffect } from 'react';
 export function AuditItem({ item, status, notes, onStatusChange, onNotesChange }) {
   const [showNotes, setShowNotes] = useState(!!notes);
 
-  // Auto-expand notes when "No" is selected
+  // Auto-expand notes when "No" is selected, collapse when changed to Yes/NA (if no notes entered)
   useEffect(() => {
     if (status === 'no') {
       setShowNotes(true);
+    } else if (!notes?.trim()) {
+      // Hide notes if switching away from "No" and no notes were entered
+      setShowNotes(false);
     }
-  }, [status]);
+  }, [status, notes]);
 
   const isNoWithoutNotes = status === 'no' && !notes?.trim();
 
