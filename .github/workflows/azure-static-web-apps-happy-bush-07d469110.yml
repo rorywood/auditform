@@ -32,6 +32,16 @@ jobs:
                const coredemo = require('@actions/core')
                return await coredemo.getIDToken()
            result-encoding: string
+      - name: Create .env file
+        run: |
+          cat > .env << EOF
+          VITE_AZURE_CLIENT_ID=${{ secrets.VITE_AZURE_CLIENT_ID }}
+          VITE_AZURE_TENANT_ID=${{ secrets.VITE_AZURE_TENANT_ID }}
+          VITE_AZURE_REDIRECT_URI=${{ secrets.VITE_AZURE_REDIRECT_URI }}
+          VITE_SHAREPOINT_SITE_URL=${{ secrets.VITE_SHAREPOINT_SITE_URL }}
+          VITE_SHAREPOINT_LIBRARY=${{ secrets.VITE_SHAREPOINT_LIBRARY }}
+          VITE_SHAREPOINT_FOLDER=${{ secrets.VITE_SHAREPOINT_FOLDER }}
+          EOF
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
@@ -45,13 +55,6 @@ jobs:
           output_location: "dist" # Built app content directory - optional
           github_id_token: ${{ steps.idtoken.outputs.result }}
           ###### End of Repository/Build Configurations ######
-        env:
-          VITE_AZURE_CLIENT_ID: ${{ secrets.VITE_AZURE_CLIENT_ID }}
-          VITE_AZURE_TENANT_ID: ${{ secrets.VITE_AZURE_TENANT_ID }}
-          VITE_AZURE_REDIRECT_URI: ${{ secrets.VITE_AZURE_REDIRECT_URI }}
-          VITE_SHAREPOINT_SITE_URL: ${{ secrets.VITE_SHAREPOINT_SITE_URL }}
-          VITE_SHAREPOINT_LIBRARY: ${{ secrets.VITE_SHAREPOINT_LIBRARY }}
-          VITE_SHAREPOINT_FOLDER: ${{ secrets.VITE_SHAREPOINT_FOLDER }}
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
