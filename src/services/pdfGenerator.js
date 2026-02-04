@@ -2,13 +2,14 @@ import { jsPDF } from 'jspdf';
 import { auditSections } from '../config/auditItems';
 
 const PRIMARY_COLOR = [0, 82, 147];
-const LIGHT_GRAY = [245, 245, 245];
-const BORDER_GRAY = [200, 200, 200];
-const TEXT_COLOR = [51, 51, 51];
-const LIGHT_TEXT = [100, 100, 100];
-const COMPLIANT_COLOR = [34, 197, 94];
-const NONCOMPLIANT_COLOR = [239, 68, 68];
-const NEUTRAL_COLOR = [156, 163, 175];
+const LIGHT_BLUE = [240, 247, 255];
+const LIGHT_GRAY = [248, 250, 252];
+const BORDER_COLOR = [226, 232, 240];
+const TEXT_COLOR = [30, 41, 59];
+const LIGHT_TEXT = [100, 116, 139];
+const COMPLIANT_COLOR = [22, 163, 74];
+const NONCOMPLIANT_COLOR = [220, 38, 38];
+const NEUTRAL_COLOR = [107, 114, 128];
 
 async function loadImage(url) {
   return new Promise((resolve, reject) => {
@@ -42,276 +43,290 @@ export async function generateAuditPdf(formData) {
     console.warn('Could not load logo for PDF:', e);
   }
 
-  function addHeader() {
-    // White header with blue accent line
-    doc.setFillColor(255, 255, 255);
-    doc.rect(0, 0, pageWidth, 40, 'F');
-
-    // Blue accent line at bottom of header
-    doc.setFillColor(...PRIMARY_COLOR);
-    doc.rect(0, 38, pageWidth, 3, 'F');
-
-    // Logo on left
-    if (logoData) {
-      try {
-        doc.addImage(logoData, 'PNG', margin, 8, 45, 22);
-      } catch (e) {
-        console.warn('Could not add logo to PDF:', e);
+  function addHeader(isFirstPage = false) {
+    if (isFirstPage) {
+      // Logo
+      if (logoData) {
+        try {
+          doc.addImage(logoData, 'PNG', margin, 12, 50, 25);
+        } catch (e) {
+          console.warn('Could not add logo to PDF:', e);
+        }
       }
+
+      // Title block on right
+      doc.setFillColor(...PRIMARY_COLOR);
+      doc.roundedRect(pageWidth - margin - 85, 10, 85, 30, 3, 3, 'F');
+
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Projects Audit', pageWidth - margin - 42.5, 22, { align: 'center' });
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Form', pageWidth - margin - 42.5, 32, { align: 'center' });
+
+      // Thin accent line
+      doc.setFillColor(...PRIMARY_COLOR);
+      doc.rect(margin, 45, contentWidth, 1, 'F');
+
+      return 55;
     }
-
-    // Title
-    doc.setTextColor(...PRIMARY_COLOR);
-    doc.setFontSize(22);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Powertec Projects Audit Form', pageWidth - margin, 18, { align: 'right' });
-
-    // Date
-    doc.setTextColor(...LIGHT_TEXT);
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`Generated: ${new Date().toLocaleDateString('en-AU')}`, pageWidth - margin, 28, { align: 'right' });
-
-    return 50;
+    return margin + 5;
   }
 
   function addFooter(pageNum, totalPages) {
-    // Footer line
-    doc.setDrawColor(...BORDER_GRAY);
-    doc.setLineWidth(0.5);
-    doc.line(margin, pageHeight - 15, pageWidth - margin, pageHeight - 15);
+    doc.setDrawColor(...BORDER_COLOR);
+    doc.setLineWidth(0.3);
+    doc.line(margin, pageHeight - 18, pageWidth - margin, pageHeight - 18);
 
-    doc.setTextColor(...LIGHT_TEXT);
     doc.setFontSize(8);
-    doc.text('Powertec Telecommunications', margin, pageHeight - 8);
-    doc.text(`Page ${pageNum} of ${totalPages}`, pageWidth - margin, pageHeight - 8, { align: 'right' });
+    doc.setTextColor(...LIGHT_TEXT);
+    doc.text('Powertec Telecommunications Pty Ltd', margin, pageHeight - 10);
+    doc.text(`Page ${pageNum} of ${totalPages}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+    doc.text(new Date().toLocaleDateString('en-AU'), pageWidth - margin, pageHeight - 10, { align: 'right' });
   }
 
-  function checkNewPage(requiredSpace = 30) {
+  function checkNewPage(requiredSpace = 25) {
     if (yPos + requiredSpace > pageHeight - 25) {
       doc.addPage();
-      yPos = margin + 10;
+      yPos = addHeader(false);
       return true;
     }
     return false;
   }
 
-  function addSectionTitle(title) {
-    checkNewPage(25);
+  function addSectionHeader(title, itemCount) {
+    checkNewPage(30);
 
-    // Section background
     doc.setFillColor(...PRIMARY_COLOR);
-    doc.roundedRect(margin, yPos, contentWidth, 10, 2, 2, 'F');
+    doc.roundedRect(margin, yPos, contentWidth, 9, 1.5, 1.5, 'F');
 
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(11);
+    doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
-    doc.text(title, margin + 5, yPos + 7);
-    yPos += 15;
+    doc.text(title.toUpperCase(), margin + 4, yPos + 6.5);
+
+    if (itemCount) {
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`${itemCount} items`, pageWidth - margin - 4, yPos + 6.5, { align: 'right' });
+    }
+
+    yPos += 13;
   }
 
-  function addInfoRow(label, value, isLast = false) {
-    const rowHeight = 8;
-    const labelWidth = 45;
+  function drawInfoTable(data) {
+    const colWidth = contentWidth / 2;
+    const rowHeight = 9;
+    let row = 0;
 
-    // Alternating row background
-    doc.setFillColor(...LIGHT_GRAY);
-    doc.rect(margin, yPos - 1, contentWidth, rowHeight, 'F');
+    for (let i = 0; i < data.length; i += 2) {
+      const isEven = row % 2 === 0;
+      doc.setFillColor(isEven ? 255 : ...LIGHT_GRAY, isEven ? 255 : undefined, isEven ? 255 : undefined);
+      doc.rect(margin, yPos, contentWidth, rowHeight, 'F');
 
-    // Border
-    doc.setDrawColor(...BORDER_GRAY);
-    doc.setLineWidth(0.2);
-    doc.rect(margin, yPos - 1, contentWidth, rowHeight, 'S');
+      doc.setDrawColor(...BORDER_COLOR);
+      doc.setLineWidth(0.2);
+      doc.rect(margin, yPos, contentWidth, rowHeight, 'S');
+      doc.line(margin + colWidth, yPos, margin + colWidth, yPos + rowHeight);
 
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...PRIMARY_COLOR);
-    doc.text(label, margin + 3, yPos + 4);
+      // Left column
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...PRIMARY_COLOR);
+      doc.text(data[i].label + ':', margin + 3, yPos + 6);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...TEXT_COLOR);
+      doc.text(data[i].value || '-', margin + 38, yPos + 6);
 
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...TEXT_COLOR);
-    doc.text(value || '-', margin + labelWidth, yPos + 4);
+      // Right column
+      if (data[i + 1]) {
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...PRIMARY_COLOR);
+        doc.text(data[i + 1].label + ':', margin + colWidth + 3, yPos + 6);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(...TEXT_COLOR);
+        doc.text(data[i + 1].value || '-', margin + colWidth + 38, yPos + 6);
+      }
 
-    yPos += rowHeight;
+      yPos += rowHeight;
+      row++;
+    }
   }
 
-  function addAuditItem(item, itemData, index) {
-    checkNewPage(18);
+  function addAuditItemsTable(items, formData) {
+    items.forEach((item, index) => {
+      const itemData = formData.auditItems[item.id] || {};
+      const status = itemData.status || '';
+      const notes = itemData.notes || '';
 
-    const status = itemData.status || 'Not answered';
-    const notes = itemData.notes || '';
-    const rowHeight = notes ? 16 : 10;
+      const hasNotes = notes.length > 0;
+      const rowHeight = hasNotes ? 14 : 8;
 
-    // Row background - alternating
-    if (index % 2 === 0) {
-      doc.setFillColor(255, 255, 255);
-    } else {
-      doc.setFillColor(...LIGHT_GRAY);
-    }
-    doc.rect(margin, yPos, contentWidth, rowHeight, 'F');
+      checkNewPage(rowHeight + 2);
 
-    // Border
-    doc.setDrawColor(...BORDER_GRAY);
-    doc.setLineWidth(0.1);
-    doc.rect(margin, yPos, contentWidth, rowHeight, 'S');
+      // Row background
+      const isEven = index % 2 === 0;
+      if (!isEven) {
+        doc.setFillColor(...LIGHT_GRAY);
+        doc.rect(margin, yPos, contentWidth, rowHeight, 'F');
+      }
 
-    // Item number
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...LIGHT_TEXT);
-    doc.text(`${index + 1}.`, margin + 3, yPos + 5);
+      // Border
+      doc.setDrawColor(...BORDER_COLOR);
+      doc.setLineWidth(0.1);
+      doc.rect(margin, yPos, contentWidth, rowHeight, 'S');
 
-    // Item label
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...TEXT_COLOR);
-    const labelLines = doc.splitTextToSize(item.label, contentWidth - 45);
-    doc.text(labelLines[0], margin + 12, yPos + 5);
-    if (labelLines.length > 1) {
-      doc.text(labelLines[1], margin + 12, yPos + 9);
-    }
-
-    // Status badge
-    let statusColor = NEUTRAL_COLOR;
-    let statusText = 'N/A';
-    let badgeColor = [240, 240, 240];
-
-    if (status === 'yes') {
-      statusColor = COMPLIANT_COLOR;
-      statusText = 'YES';
-      badgeColor = [220, 252, 231];
-    } else if (status === 'no') {
-      statusColor = NONCOMPLIANT_COLOR;
-      statusText = 'NO';
-      badgeColor = [254, 226, 226];
-    } else if (status === 'na') {
-      statusColor = NEUTRAL_COLOR;
-      statusText = 'N/A';
-      badgeColor = [243, 244, 246];
-    }
-
-    // Draw status badge
-    const badgeX = pageWidth - margin - 22;
-    const badgeY = yPos + 1;
-    doc.setFillColor(...badgeColor);
-    doc.roundedRect(badgeX, badgeY, 20, 6, 1, 1, 'F');
-
-    doc.setFontSize(7);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...statusColor);
-    doc.text(statusText, badgeX + 10, badgeY + 4.5, { align: 'center' });
-
-    // Notes if present
-    if (notes) {
-      doc.setTextColor(...LIGHT_TEXT);
-      doc.setFont('helvetica', 'italic');
+      // Item number
       doc.setFontSize(7);
-      const noteText = doc.splitTextToSize(`Note: ${notes}`, contentWidth - 20);
-      doc.text(noteText[0], margin + 12, yPos + 13);
-    }
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...LIGHT_TEXT);
+      doc.text(String(index + 1).padStart(2, '0'), margin + 2, yPos + 5);
 
-    yPos += rowHeight;
+      // Item text
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...TEXT_COLOR);
+      const maxWidth = contentWidth - 45;
+      const lines = doc.splitTextToSize(item.label, maxWidth);
+      doc.text(lines[0], margin + 12, yPos + 5);
+
+      // Status
+      let statusText = '';
+      let statusColor = LIGHT_TEXT;
+
+      if (status === 'yes') {
+        statusText = 'YES';
+        statusColor = COMPLIANT_COLOR;
+      } else if (status === 'no') {
+        statusText = 'NO';
+        statusColor = NONCOMPLIANT_COLOR;
+      } else if (status === 'na') {
+        statusText = 'N/A';
+        statusColor = NEUTRAL_COLOR;
+      }
+
+      if (statusText) {
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...statusColor);
+        doc.text(statusText, pageWidth - margin - 3, yPos + 5, { align: 'right' });
+      }
+
+      // Notes
+      if (hasNotes) {
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'italic');
+        doc.setTextColor(...LIGHT_TEXT);
+        const noteLines = doc.splitTextToSize('Note: ' + notes, maxWidth - 10);
+        doc.text(noteLines[0], margin + 12, yPos + 11);
+      }
+
+      yPos += rowHeight;
+    });
   }
 
-  // Start building PDF
-  yPos = addHeader();
+  // === BUILD PDF ===
 
-  // Project Information Section
-  doc.setTextColor(...PRIMARY_COLOR);
-  doc.setFontSize(14);
+  yPos = addHeader(true);
+
+  // Project Information
+  doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...TEXT_COLOR);
   doc.text('Project Information', margin, yPos);
-  yPos += 8;
+  yPos += 6;
 
   const projectInfo = formData.projectInfo;
-  addInfoRow('Project Code', projectInfo.projectCode);
-  addInfoRow('Site Name', projectInfo.siteName);
-  addInfoRow('Site Address', projectInfo.siteAddress);
-  addInfoRow('Project Manager', projectInfo.projectManager);
-  addInfoRow('Auditor', projectInfo.auditor);
-  addInfoRow('Audit Date', projectInfo.auditDate, true);
-
-  yPos += 12;
-
-  // Audit Sections
-  Object.entries(auditSections).forEach(([sectionId, section]) => {
-    addSectionTitle(section.title);
-
-    section.items.forEach((item, index) => {
-      const itemData = formData.auditItems[item.id] || {};
-      addAuditItem(item, itemData, index);
-    });
-
-    yPos += 8;
-  });
-
-  // Sign-off Section
-  checkNewPage(80);
-  addSectionTitle('Sign-off');
-
-  const signoff = formData.signoff;
-
-  // Comments
-  if (signoff.comments) {
-    doc.setFillColor(...LIGHT_GRAY);
-    doc.roundedRect(margin, yPos, contentWidth, 25, 2, 2, 'F');
-
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...PRIMARY_COLOR);
-    doc.setFontSize(9);
-    doc.text('Additional Comments:', margin + 5, yPos + 6);
-
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...TEXT_COLOR);
-    doc.setFontSize(8);
-    const commentLines = doc.splitTextToSize(signoff.comments, contentWidth - 10);
-    doc.text(commentLines.slice(0, 3), margin + 5, yPos + 13);
-    yPos += 30;
-  }
-
-  // Project Manager Sign-off Box
-  doc.setDrawColor(...PRIMARY_COLOR);
-  doc.setLineWidth(0.5);
-  doc.roundedRect(margin, yPos, contentWidth, 50, 2, 2, 'S');
-
-  doc.setFillColor(...PRIMARY_COLOR);
-  doc.roundedRect(margin, yPos, contentWidth, 8, 2, 0, 'F');
-
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Project Manager Approval', margin + 5, yPos + 6);
-
-  yPos += 12;
-
-  // Name and Date row
-  doc.setTextColor(...TEXT_COLOR);
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Name:', margin + 5, yPos + 4);
-  doc.setFont('helvetica', 'normal');
-  doc.text(signoff.projectManagerName || '-', margin + 25, yPos + 4);
-
-  doc.setFont('helvetica', 'bold');
-  doc.text('Date:', margin + 100, yPos + 4);
-  doc.setFont('helvetica', 'normal');
-  doc.text(signoff.projectManagerDate || '-', margin + 115, yPos + 4);
+  drawInfoTable([
+    { label: 'Project Code', value: projectInfo.projectCode },
+    { label: 'Audit Date', value: projectInfo.auditDate },
+    { label: 'Site Name', value: projectInfo.siteName },
+    { label: 'Project Manager', value: projectInfo.projectManager },
+    { label: 'Site Address', value: projectInfo.siteAddress },
+    { label: 'Auditor', value: projectInfo.auditor },
+  ]);
 
   yPos += 10;
 
-  // Signature
+  // Audit Sections
+  Object.entries(auditSections).forEach(([sectionId, section]) => {
+    addSectionHeader(section.title, section.items.length);
+    addAuditItemsTable(section.items, formData);
+    yPos += 6;
+  });
+
+  // Sign-off Section
+  checkNewPage(70);
+  addSectionHeader('Sign-off & Approval', null);
+
+  const signoff = formData.signoff;
+
+  // Comments box
+  if (signoff.comments) {
+    doc.setFillColor(...LIGHT_BLUE);
+    doc.roundedRect(margin, yPos, contentWidth, 20, 2, 2, 'F');
+    doc.setDrawColor(...PRIMARY_COLOR);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(margin, yPos, contentWidth, 20, 2, 2, 'S');
+
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...PRIMARY_COLOR);
+    doc.text('Comments:', margin + 4, yPos + 6);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...TEXT_COLOR);
+    const commentLines = doc.splitTextToSize(signoff.comments, contentWidth - 10);
+    doc.text(commentLines.slice(0, 2), margin + 4, yPos + 12);
+    yPos += 25;
+  }
+
+  // Signature box
+  doc.setFillColor(255, 255, 255);
+  doc.setDrawColor(...PRIMARY_COLOR);
+  doc.setLineWidth(0.5);
+  doc.roundedRect(margin, yPos, contentWidth, 45, 2, 2, 'S');
+
+  // Header bar
+  doc.setFillColor(...LIGHT_BLUE);
+  doc.rect(margin + 0.25, yPos + 0.25, contentWidth - 0.5, 10, 'F');
+
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
-  doc.text('Signature:', margin + 5, yPos + 4);
+  doc.setTextColor(...PRIMARY_COLOR);
+  doc.text('Project Manager Approval', margin + 4, yPos + 7);
+
+  // Name and Date
+  yPos += 15;
+  doc.setFontSize(8);
+  doc.setTextColor(...TEXT_COLOR);
+
+  doc.setFont('helvetica', 'bold');
+  doc.text('Name:', margin + 4, yPos);
+  doc.setFont('helvetica', 'normal');
+  doc.text(signoff.projectManagerName || '-', margin + 22, yPos);
+
+  doc.setFont('helvetica', 'bold');
+  doc.text('Date:', margin + 100, yPos);
+  doc.setFont('helvetica', 'normal');
+  doc.text(signoff.projectManagerDate || '-', margin + 115, yPos);
+
+  // Signature
+  yPos += 8;
+  doc.setFont('helvetica', 'bold');
+  doc.text('Signature:', margin + 4, yPos);
 
   if (signoff.projectManagerSignature && signoff.projectManagerSignature.startsWith('data:image')) {
     try {
-      doc.addImage(signoff.projectManagerSignature, 'PNG', margin + 35, yPos - 5, 50, 25);
+      doc.addImage(signoff.projectManagerSignature, 'PNG', margin + 30, yPos - 8, 55, 22);
     } catch (e) {
-      console.warn('Could not add PM signature to PDF:', e);
+      console.warn('Could not add signature to PDF:', e);
     }
   }
 
-  // Add footers to all pages
+  // Add footers
   const totalPages = doc.internal.getNumberOfPages();
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
