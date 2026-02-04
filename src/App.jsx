@@ -457,7 +457,7 @@ function App() {
                     Your audit has been uploaded to SharePoint successfully. Would you like to download a PDF copy?
                   </p>
                   <img
-                    src="https://surfingworldcontent.s3.ap-southeast-2.amazonaws.com/surfingworld/wp-content/uploads/2018/08/Noa-Deane-GIF-source-2.gif"
+                    src="/surfing.gif"
                     alt="Surfing celebration"
                     className="w-full max-w-xs mx-auto rounded-lg mb-4"
                   />
