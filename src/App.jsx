@@ -620,12 +620,17 @@ function App() {
       {/* Navigation - Fixed on mobile, inline on desktop */}
       <div className="fixed bottom-0 left-0 right-0 sm:relative bg-white border-t sm:border border-gray-200 sm:rounded-lg p-3 sm:p-4 shadow-lg sm:shadow-sm sm:mx-auto sm:max-w-7xl sm:mb-6">
         <div className="flex gap-2 sm:gap-3 justify-between items-center max-w-7xl mx-auto">
-          <button
-            onClick={handleResetForm}
-            className="px-3 py-2 text-xs sm:text-sm text-gray-600 hover:text-noncompliant active:text-noncompliant transition-colors"
-          >
-            Reset
-          </button>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <button
+              onClick={handleResetForm}
+              className="px-3 py-2 text-xs sm:text-sm text-gray-600 hover:text-noncompliant active:text-noncompliant transition-colors"
+            >
+              Reset
+            </button>
+            <span className="hidden sm:inline text-xs text-gray-400">
+              Your progress is saved automatically
+            </span>
+          </div>
 
           <div className="flex gap-2 sm:gap-3">
             {!isFirstTab && (
