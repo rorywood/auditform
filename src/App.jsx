@@ -402,9 +402,11 @@ function App() {
             />
             <div className="min-w-0 flex-1">
               <h1 className="text-lg sm:text-2xl font-bold text-primary truncate">Projects Audit Form</h1>
-              {formData.projectInfo.siteName && (
+              {formData.projectInfo.projectCode && formData.projectInfo.siteName && (
                 <p className="text-gray-600 text-xs sm:text-sm truncate">
-                  {formData.projectInfo.projectCode} - {formData.projectInfo.siteName}
+                  <span className="text-gray-400">Project:</span> {formData.projectInfo.projectCode}
+                  <span className="mx-1 sm:mx-2 text-gray-300">|</span>
+                  <span className="text-gray-400">Site:</span> {formData.projectInfo.siteName}
                 </p>
               )}
             </div>
