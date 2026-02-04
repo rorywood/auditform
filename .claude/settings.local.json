@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install)",
+      "Bash(npm run build)",
+      "Bash(npm run dev)",
+      "Bash(timeout:*)",
+      "Bash(curl:*)",
+      "Bash(git init:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nInitial commit: Powertec Project Audit Form\n\n- React + Vite application for project audits\n- 7 audit sections with 57 items total\n- Signature pad for Project Manager sign-off\n- PDF generation with jsPDF\n- Microsoft authentication via MSAL\n- Auto-save to localStorage\n- Tailwind CSS styling\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git branch:*)",
+      "Bash(git remote add:*)",
+      "Bash(git push:*)",
+      "Bash(git checkout:*)",
+      "Bash(git commit:*)",
+      "Bash(git pull:*)",
+      "Bash(powershell -Command \"Get-Module -ListAvailable -Name Microsoft.Online.SharePoint.PowerShell\")",
+      "Bash(powershell -Command \"Install-Module -Name Microsoft.Online.SharePoint.PowerShell -Force -AllowClobber -Scope CurrentUser\")",
+      "Bash(powershell -ExecutionPolicy Bypass -Command \"Import-Module PowerShellGet; Install-Module -Name Microsoft.Online.SharePoint.PowerShell -Force -AllowClobber -Scope CurrentUser\")",
+      "Bash(C:WindowsSystem32WindowsPowerShellv1.0powershell.exe -ExecutionPolicy Bypass -Command \"Install-Module -Name Microsoft.Online.SharePoint.PowerShell -Force -AllowClobber -Scope CurrentUser\")",
+      "Bash(powershell.exe -Version 5.1 -ExecutionPolicy Bypass -Command \"Install-Module -Name Microsoft.Online.SharePoint.PowerShell -Force -Scope CurrentUser -AllowClobber\")",
+      "WebFetch(domain:support.microsoft.com)",
+      "Bash(gh workflow run:*)",
+      "Bash(gh workflow list:*)",
+      "Bash(gh run list:*)",
+      "Bash(gh run view:*)"
+    ]
+  }
+}

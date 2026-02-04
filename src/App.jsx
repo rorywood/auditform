@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useMsal, useIsAuthenticated } from '@azure/msal-react';
 import { useFormData } from './hooks/useFormData';
 import { ProjectInfoForm } from './components/ProjectInfoForm';
@@ -13,6 +13,7 @@ import { ContractorSection } from './sections/ContractorSection';
 import { uploadToSharePoint, generateFileName } from './services/graphApi';
 import { downloadPdf, getPdfBlob } from './services/pdfGenerator';
 import { signIn, getActiveAccount } from './services/auth';
+import { loginRequest } from './config/msalConfig';
 
 const tabs = [
   { id: 'project', label: 'Project Info' },
@@ -34,6 +35,40 @@ function App() {
   const [message, setMessage] = useState(null);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [uploadStatus, setUploadStatus] = useState(null); // 'uploading', 'success', 'error'
+  const [isAuthReady, setIsAuthReady] = useState(false);
+
+  // Auto sign-in with MSAL when app loads
+  useEffect(() => {
+    const initAuth = async () => {
+      try {
+        // First, try to handle any redirect response
+        await instance.handleRedirectPromise();
+
+        const accounts = instance.getAllAccounts();
+        if (accounts.length === 0) {
+          // No accounts, sign in silently using redirect
+          await instance.loginRedirect(loginRequest);
+        } else {
+          // Already have an account, try to get a token silently
+          try {
+            await instance.acquireTokenSilent({
+              ...loginRequest,
+              account: accounts[0],
+            });
+          } catch (e) {
+            // Silent token failed, will try popup on upload
+            console.log('Silent token acquisition failed, will retry on upload');
+          }
+          setIsAuthReady(true);
+        }
+      } catch (error) {
+        console.error('Auth init error:', error);
+        setIsAuthReady(true);
+      }
+    };
+
+    initAuth();
+  }, [instance]);
 
   const {
     formData,
@@ -89,14 +124,9 @@ function App() {
   const handleUploadToSharePoint = useCallback(async () => {
     setUploadStatus('uploading');
     try {
-      // Check if user is authenticated
-      if (!isAuthenticated) {
-        await signIn(instance);
-      }
-
       const account = getActiveAccount(instance);
       if (!account) {
-        throw new Error('Please sign in to upload');
+        throw new Error('Not signed in. Please refresh the page.');
       }
 
       const pdfBlob = await getPdfBlob(formData);
@@ -110,7 +140,7 @@ function App() {
       setUploadStatus('error');
       showMessage(`Upload failed: ${error.message}`, 'error');
     }
-  }, [formData, isAuthenticated, instance, showMessage]);
+  }, [formData, instance, showMessage]);
 
   const handleSubmit = useCallback(async () => {
     if (!validateForm()) {
@@ -142,13 +172,9 @@ function App() {
 
     // Auto-upload to SharePoint
     try {
-      if (!isAuthenticated) {
-        await signIn(instance);
-      }
-
       const account = getActiveAccount(instance);
       if (!account) {
-        throw new Error('Please sign in to upload');
+        throw new Error('Not signed in. Please refresh the page.');
       }
 
       const pdfBlob = await getPdfBlob(formData);
@@ -233,6 +259,23 @@ function App() {
 
   const isLastTab = currentTabIndex === tabs.length - 1;
   const isFirstTab = currentTabIndex === 0;
+
+  // Show loading while auth initializes
+  if (!isAuthReady) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-primary mb-4">
+            <svg className="animate-spin h-8 w-8 text-white" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            </svg>
+          </div>
+          <p className="text-gray-600">Signing you in...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
