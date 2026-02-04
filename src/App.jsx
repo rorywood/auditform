@@ -216,7 +216,7 @@ function App() {
     return !!(projectCode && siteName && siteAddress && projectManager && auditor && auditDate);
   }, [formData.projectInfo]);
 
-  // Check if a section is complete
+  // Check if a section is complete (all items answered AND all "No" items have notes)
   const isSectionComplete = useCallback((sectionId) => {
     if (sectionId === 'project') {
       return isProjectInfoComplete();
@@ -225,10 +225,47 @@ function App() {
       const { projectManagerName, projectManagerSignature, projectManagerDate } = formData.signoff;
       return !!(projectManagerName && projectManagerSignature && projectManagerDate);
     }
-    // For audit sections
+    // For audit sections - check both completion AND notes for "No" items
     const progress = getSectionProgress(sectionId);
-    return progress && progress.completed === progress.total;
-  }, [isProjectInfoComplete, formData.signoff, getSectionProgress]);
+    const allAnswered = progress && progress.completed === progress.total;
+    if (!allAnswered) return false;
+
+    // Check if any "No" items in this section are missing notes
+    const missingNotes = getNonCompliantWithoutNotes().filter(item => item.sectionId === sectionId);
+    return missingNotes.length === 0;
+  }, [isProjectInfoComplete, formData.signoff, getSectionProgress, getNonCompliantWithoutNotes]);
+
+  // Check if a tab can be accessed (all previous sections must be complete)
+  const canAccessTab = useCallback((tabIndex) => {
+    if (tabIndex === 0) return true; // Project info always accessible
+
+    // Check all previous sections are complete
+    for (let i = 0; i < tabIndex; i++) {
+      if (!isSectionComplete(tabs[i].id)) {
+        return false;
+      }
+    }
+    return true;
+  }, [isSectionComplete]);
+
+  // Check if current audit section has incomplete items or missing notes for "No" items
+  const getSectionIssues = useCallback((sectionId) => {
+    const auditSections = ['swms', 'donor', 'cabinet', 'das', 'commissioning', 'contractor'];
+    if (!auditSections.includes(sectionId)) return null;
+
+    const progress = getSectionProgress(sectionId);
+    if (progress.completed < progress.total) {
+      return { type: 'incomplete', remaining: progress.total - progress.completed };
+    }
+
+    // Check for "No" items without notes in this section
+    const missingNotes = getNonCompliantWithoutNotes().filter(item => item.sectionId === sectionId);
+    if (missingNotes.length > 0) {
+      return { type: 'missingNotes', items: missingNotes };
+    }
+
+    return null;
+  }, [getSectionProgress, getNonCompliantWithoutNotes]);
 
   const goToNextTab = useCallback(() => {
     // Don't allow progressing past project info until it's complete
@@ -238,11 +275,24 @@ function App() {
       return;
     }
 
+    // Check audit sections for completion and notes
+    const issues = getSectionIssues(activeTab);
+    if (issues) {
+      if (issues.type === 'incomplete') {
+        showMessage(`Please complete all items in this section. ${issues.remaining} item(s) remaining.`, 'error');
+        return;
+      }
+      if (issues.type === 'missingNotes') {
+        showMessage(`Please add notes for all non-compliant items. ${issues.items.length} item(s) need explanation.`, 'error');
+        return;
+      }
+    }
+
     if (currentTabIndex < tabs.length - 1) {
       setActiveTab(tabs[currentTabIndex + 1].id);
       window.scrollTo(0, 0);
     }
-  }, [currentTabIndex, activeTab, isProjectInfoComplete, validateForm, showMessage]);
+  }, [currentTabIndex, activeTab, isProjectInfoComplete, validateForm, showMessage, getSectionIssues]);
 
   const goToPreviousTab = useCallback(() => {
     if (currentTabIndex > 0) {
@@ -457,16 +507,14 @@ function App() {
             {tabs.map((tab, index) => {
               const isComplete = isSectionComplete(tab.id);
               const isCurrent = index === currentTabIndex;
-              // Don't allow clicking sections beyond project info if project info is incomplete
-              const canAccess = tab.id === 'project' || isProjectInfoComplete();
+              const canAccess = canAccessTab(index);
 
               return (
                 <button
                   key={tab.id}
                   onClick={() => {
                     if (!canAccess) {
-                      showMessage('Please complete project information first', 'error');
-                      setActiveTab('project');
+                      showMessage('Please complete all previous sections first', 'error');
                       return;
                     }
                     setActiveTab(tab.id);
@@ -493,16 +541,14 @@ function App() {
                 ? getSectionProgress(tab.id)
                 : null;
               const isComplete = isSectionComplete(tab.id);
-              const canAccess = tab.id === 'project' || isProjectInfoComplete();
+              const canAccess = canAccessTab(index);
 
               return (
                 <button
                   key={tab.id}
                   onClick={() => {
                     if (!canAccess) {
-                      showMessage('Please complete project information first', 'error');
-                      setActiveTab('project');
-                      validateForm();
+                      showMessage('Please complete all previous sections first', 'error');
                       return;
                     }
                     setActiveTab(tab.id);
