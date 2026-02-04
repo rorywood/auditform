@@ -9,15 +9,15 @@ export function ProjectInfoForm({ projectInfo, onUpdate, errors }) {
   ];
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
-      <div className="bg-primary text-white p-4 rounded-t-lg">
-        <h2 className="text-xl font-semibold">Project Information</h2>
-        <p className="text-blue-100 text-sm mt-1">
+    <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+      <div className="bg-primary text-white p-3 sm:p-4">
+        <h2 className="text-lg sm:text-xl font-semibold">Project Information</h2>
+        <p className="text-blue-100 text-xs sm:text-sm mt-1">
           Enter the project and audit details
         </p>
       </div>
 
-      <div className="p-4 sm:p-6">
+      <div className="p-3 sm:p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
           {fields.map((field) => (
             <div key={field.id}>

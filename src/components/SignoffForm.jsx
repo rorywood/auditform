@@ -2,10 +2,10 @@ import { SignaturePad } from './SignaturePad';
 
 export function SignoffForm({ signoff, onUpdate, nonCompliantItems }) {
   return (
-    <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
-      <div className="bg-primary text-white p-4 rounded-t-lg">
-        <h2 className="text-xl font-semibold">Sign-off</h2>
-        <p className="text-blue-100 text-sm mt-1">
+    <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+      <div className="bg-primary text-white p-3 sm:p-4">
+        <h2 className="text-lg sm:text-xl font-semibold">Sign-off</h2>
+        <p className="text-blue-100 text-xs sm:text-sm mt-1">
           Review and sign off on the audit
         </p>
       </div>

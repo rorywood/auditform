@@ -16,7 +16,7 @@ export function AuditItem({ item, status, notes, onStatusChange, onNotesChange }
   const isNoWithoutNotes = status === 'no' && !notes?.trim();
 
   const getButtonClass = (buttonStatus) => {
-    const base = 'px-4 py-3 sm:py-2 text-sm font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 min-w-[50px] sm:min-w-[44px]';
+    const base = 'flex-1 sm:flex-none px-3 sm:px-4 py-3 sm:py-2 text-sm font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2';
 
     if (status === buttonStatus) {
       switch (buttonStatus) {
@@ -35,9 +35,9 @@ export function AuditItem({ item, status, notes, onStatusChange, onNotesChange }
   };
 
   return (
-    <div className="border border-gray-200 rounded-lg p-4 mb-3 bg-white shadow-sm">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <p className="text-gray-800 flex-1">{item.label}</p>
+    <div className="border border-gray-200 rounded-lg p-3 sm:p-4 mb-3 bg-white shadow-sm">
+      <div className="flex flex-col gap-3">
+        <p className="text-gray-800 text-sm sm:text-base">{item.label}</p>
 
         <div className="flex items-center gap-2">
           <button
@@ -64,7 +64,7 @@ export function AuditItem({ item, status, notes, onStatusChange, onNotesChange }
           <button
             type="button"
             onClick={() => setShowNotes(!showNotes)}
-            className="ml-1 p-3 sm:p-2 text-gray-500 hover:text-primary active:text-primary transition-colors rounded-md"
+            className="flex-shrink-0 p-3 sm:p-2 text-gray-500 hover:text-primary active:text-primary transition-colors rounded-md"
             title={showNotes ? 'Hide notes' : 'Add notes'}
           >
             <svg

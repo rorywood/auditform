@@ -100,12 +100,24 @@ function App() {
     }
   }, [formData.projectInfo, formData.auditItems]);
 
-  // Clear field-level errors when user starts typing in project info
+  // Clear individual field errors when that field gets a value
   useEffect(() => {
     if (Object.keys(errors).length > 0) {
-      setErrors({});
+      const { projectCode, siteName, siteAddress, projectManager, auditor, auditDate } = formData.projectInfo;
+      const newErrors = { ...errors };
+
+      if (projectCode && newErrors.projectCode) delete newErrors.projectCode;
+      if (siteName && newErrors.siteName) delete newErrors.siteName;
+      if (siteAddress && newErrors.siteAddress) delete newErrors.siteAddress;
+      if (projectManager && newErrors.projectManager) delete newErrors.projectManager;
+      if (auditor && newErrors.auditor) delete newErrors.auditor;
+      if (auditDate && newErrors.auditDate) delete newErrors.auditDate;
+
+      if (Object.keys(newErrors).length !== Object.keys(errors).length) {
+        setErrors(newErrors);
+      }
     }
-  }, [formData.projectInfo]);
+  }, [formData.projectInfo, errors]);
 
   const validateForm = useCallback(() => {
     const newErrors = {};
