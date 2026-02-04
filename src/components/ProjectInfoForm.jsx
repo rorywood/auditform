@@ -20,7 +20,7 @@ export function ProjectInfoForm({ projectInfo, onUpdate, errors }) {
       <div className="p-3 sm:p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
           {fields.map((field) => (
-            <div key={field.id}>
+            <div key={field.id} className="min-w-0">
               <label
                 htmlFor={field.id}
                 className="block text-sm font-medium text-gray-700 mb-1"
@@ -33,9 +33,9 @@ export function ProjectInfoForm({ projectInfo, onUpdate, errors }) {
                 id={field.id}
                 value={projectInfo[field.id] || ''}
                 onChange={(e) => onUpdate(field.id, e.target.value)}
-                className={`w-full px-3 py-3 sm:py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-base ${
-                  errors?.[field.id] ? 'border-noncompliant' : 'border-gray-300'
-                }`}
+                className={`w-full min-w-0 px-3 py-3 sm:py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-base ${
+                  field.type === 'date' ? 'appearance-none' : ''
+                } ${errors?.[field.id] ? 'border-noncompliant' : 'border-gray-300'}`}
               />
               {errors?.[field.id] && (
                 <p className="mt-1 text-sm text-noncompliant">{errors[field.id]}</p>
