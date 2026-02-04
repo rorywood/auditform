@@ -280,22 +280,20 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white shadow-lg sticky top-0 z-50 border-b-4 border-primary">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <img
-                src="/logo.png"
-                alt="Powertec"
-                className="h-12 w-auto"
-              />
-              <div>
-                <h1 className="text-2xl font-bold text-primary">Projects Audit Form</h1>
-                {formData.projectInfo.siteName && (
-                  <p className="text-gray-600 text-sm">
-                    {formData.projectInfo.projectCode} - {formData.projectInfo.siteName}
-                  </p>
-                )}
-              </div>
+        <div className="max-w-7xl mx-auto px-4 py-3 sm:py-4">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <img
+              src="/logo.png"
+              alt="Powertec"
+              className="h-10 sm:h-12 w-auto"
+            />
+            <div className="min-w-0 flex-1">
+              <h1 className="text-lg sm:text-2xl font-bold text-primary truncate">Projects Audit Form</h1>
+              {formData.projectInfo.siteName && (
+                <p className="text-gray-600 text-xs sm:text-sm truncate">
+                  {formData.projectInfo.projectCode} - {formData.projectInfo.siteName}
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -303,7 +301,7 @@ function App() {
 
       {message && (
         <div
-          className={`fixed top-20 right-4 z-50 px-4 py-3 rounded-lg shadow-lg ${
+          className={`fixed top-20 left-4 right-4 sm:left-auto sm:right-4 sm:max-w-md z-50 px-4 py-3 rounded-lg shadow-lg text-sm sm:text-base ${
             message.type === 'success'
               ? 'bg-compliant text-white'
               : message.type === 'error'
@@ -412,7 +410,32 @@ function App() {
           <ProgressIndicator progress={getOverallProgress} />
         </div>
 
-        <div className="mb-6 overflow-x-auto">
+        {/* Mobile: Current section indicator */}
+        <div className="sm:hidden mb-4 bg-white rounded-lg border border-gray-200 p-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-gray-500 uppercase tracking-wide">Section {currentTabIndex + 1} of {tabs.length}</span>
+            <span className="text-sm font-medium text-primary">{tabs[currentTabIndex].label}</span>
+          </div>
+          <div className="mt-2 flex gap-1">
+            {tabs.map((tab, index) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex-1 h-2 rounded-full transition-colors ${
+                  index === currentTabIndex
+                    ? 'bg-primary'
+                    : index < currentTabIndex
+                    ? 'bg-compliant'
+                    : 'bg-gray-200'
+                }`}
+                aria-label={`Go to ${tab.label}`}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Desktop: Tab navigation */}
+        <div className="hidden sm:block mb-6 overflow-x-auto">
           <div className="flex space-x-1 border-b border-gray-200 min-w-max">
             {tabs.map((tab, index) => {
               const progress = ['swms', 'donor', 'cabinet', 'das', 'commissioning', 'contractor'].includes(tab.id)
@@ -444,31 +467,38 @@ function App() {
 
         <div className="mb-6">{renderTabContent()}</div>
 
-        <div className="flex flex-wrap gap-3 justify-between items-center bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+        {/* Spacer for fixed mobile nav */}
+        <div className="h-20 sm:hidden"></div>
+      </div>
+
+      {/* Navigation - Fixed on mobile, inline on desktop */}
+      <div className="fixed bottom-0 left-0 right-0 sm:relative bg-white border-t sm:border border-gray-200 sm:rounded-lg p-3 sm:p-4 shadow-lg sm:shadow-sm sm:mx-auto sm:max-w-7xl sm:mb-6">
+        <div className="flex gap-2 sm:gap-3 justify-between items-center max-w-7xl mx-auto">
           <button
             onClick={handleResetForm}
-            className="px-4 py-2 text-sm text-gray-600 hover:text-noncompliant transition-colors"
+            className="px-3 py-2 text-xs sm:text-sm text-gray-600 hover:text-noncompliant active:text-noncompliant transition-colors"
           >
-            Reset Form
+            Reset
           </button>
 
-          <div className="flex gap-3">
+          <div className="flex gap-2 sm:gap-3">
             {!isFirstTab && (
               <button
                 onClick={goToPreviousTab}
-                className="px-6 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors flex items-center gap-2"
+                className="px-4 sm:px-6 py-3 sm:py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 active:bg-gray-400 transition-colors flex items-center gap-1 sm:gap-2 text-sm"
               >
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
                 </svg>
-                Previous
+                <span className="hidden sm:inline">Previous</span>
+                <span className="sm:hidden">Back</span>
               </button>
             )}
 
             {!isLastTab ? (
               <button
                 onClick={goToNextTab}
-                className="px-6 py-2 bg-primary text-white rounded-md hover:bg-blue-800 transition-colors flex items-center gap-2"
+                className="px-6 sm:px-6 py-3 sm:py-2 bg-primary text-white rounded-md hover:bg-blue-800 active:bg-blue-900 transition-colors flex items-center gap-1 sm:gap-2 text-sm font-medium"
               >
                 Next
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -479,12 +509,12 @@ function App() {
               <button
                 onClick={handleSubmit}
                 disabled={isLoading}
-                className="px-6 py-2 bg-compliant text-white rounded-md hover:bg-green-600 transition-colors disabled:opacity-50 flex items-center gap-2"
+                className="px-5 sm:px-6 py-3 sm:py-2 bg-compliant text-white rounded-md hover:bg-green-600 active:bg-green-700 transition-colors disabled:opacity-50 flex items-center gap-1 sm:gap-2 text-sm font-medium"
               >
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                 </svg>
-                Submit Audit
+                Submit
               </button>
             )}
           </div>

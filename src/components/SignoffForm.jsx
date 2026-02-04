@@ -10,15 +10,15 @@ export function SignoffForm({ signoff, onUpdate, nonCompliantItems }) {
         </p>
       </div>
 
-      <div className="p-6 space-y-6">
+      <div className="p-4 sm:p-6 space-y-5 sm:space-y-6">
         {nonCompliantItems.length > 0 && (
-          <div className="bg-red-50 border border-noncompliant rounded-lg p-4">
-            <h3 className="text-noncompliant font-semibold mb-2">
+          <div className="bg-red-50 border border-noncompliant rounded-lg p-3 sm:p-4">
+            <h3 className="text-noncompliant font-semibold mb-2 text-sm sm:text-base">
               Non-Compliant Items ({nonCompliantItems.length})
             </h3>
             <ul className="space-y-2">
               {nonCompliantItems.map((item) => (
-                <li key={item.itemId} className="text-sm">
+                <li key={item.itemId} className="text-xs sm:text-sm">
                   <span className="font-medium">{item.sectionTitle}:</span>{' '}
                   {item.itemLabel}
                   {item.notes && (
@@ -41,13 +41,13 @@ export function SignoffForm({ signoff, onUpdate, nonCompliantItems }) {
             id="comments"
             value={signoff.comments || ''}
             onChange={(e) => onUpdate('comments', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+            className="w-full px-3 py-3 sm:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-base"
             rows={4}
             placeholder="Enter any additional comments or observations..."
           />
         </div>
 
-        <div className="max-w-md">
+        <div className="sm:max-w-md">
           <h3 className="font-semibold text-gray-800 border-b pb-2 mb-4">
             Project Manager Sign-off
           </h3>
@@ -64,7 +64,7 @@ export function SignoffForm({ signoff, onUpdate, nonCompliantItems }) {
                 id="projectManagerName"
                 value={signoff.projectManagerName || ''}
                 onChange={(e) => onUpdate('projectManagerName', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                className="w-full px-3 py-3 sm:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-base"
               />
             </div>
             <SignaturePad
@@ -84,7 +84,7 @@ export function SignoffForm({ signoff, onUpdate, nonCompliantItems }) {
                 id="projectManagerDate"
                 value={signoff.projectManagerDate || ''}
                 onChange={(e) => onUpdate('projectManagerDate', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                className="w-full px-3 py-3 sm:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-base"
               />
             </div>
           </div>

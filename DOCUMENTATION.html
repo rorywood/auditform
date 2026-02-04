@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Projects Audit Form - Technical Documentation</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      line-height: 1.6;
+      color: #1f2937;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 40px 20px;
+      background: #fff;
+    }
+    h1 {
+      color: #005293;
+      border-bottom: 3px solid #005293;
+      padding-bottom: 10px;
+      margin-top: 0;
+    }
+    h2 {
+      color: #005293;
+      border-bottom: 1px solid #e5e7eb;
+      padding-bottom: 8px;
+      margin-top: 40px;
+    }
+    h3 {
+      color: #374151;
+      margin-top: 25px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 15px 0;
+      font-size: 14px;
+    }
+    th, td {
+      border: 1px solid #e5e7eb;
+      padding: 10px 12px;
+      text-align: left;
+    }
+    th {
+      background: #f3f4f6;
+      font-weight: 600;
+      color: #005293;
+    }
+    tr:nth-child(even) { background: #f9fafb; }
+    code {
+      background: #f3f4f6;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 13px;
+    }
+    pre {
+      background: #1f2937;
+      color: #e5e7eb;
+      padding: 15px;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-size: 13px;
+    }
+    pre code {
+      background: none;
+      padding: 0;
+      color: inherit;
+    }
+    .warning {
+      background: #fef3c7;
+      border-left: 4px solid #f59e0b;
+      padding: 12px 15px;
+      margin: 15px 0;
+    }
+    .info {
+      background: #dbeafe;
+      border-left: 4px solid #3b82f6;
+      padding: 12px 15px;
+      margin: 15px 0;
+    }
+    hr { border: none; border-top: 1px solid #e5e7eb; margin: 30px 0; }
+    a { color: #005293; }
+    @media print {
+      body { padding: 20px; }
+      h2 { page-break-before: auto; }
+      pre { white-space: pre-wrap; }
+    }
+  </style>
+</head>
+<body>
+
+<h1>Projects Audit Form<br><small style="font-weight:normal;font-size:18px;color:#6b7280;">Technical Documentation</small></h1>
+
+<h2>Overview</h2>
+<p>The Projects Audit Form is a web application for Powertec telecommunications project audits. It allows project managers to complete compliance audits, sign off digitally, and automatically upload PDF reports to SharePoint.</p>
+
+<p><strong>Live URL:</strong> <a href="https://projectsauditform.powertec.com.au">https://projectsauditform.powertec.com.au</a></p>
+
+<hr>
+
+<h2>Architecture</h2>
+
+<pre><code>┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
+│   React App     │────▶│  Azure Static    │────▶│   Azure AD      │
+│   (Frontend)    │     │  Web Apps        │     │   (Auth)        │
+└─────────────────┘     └──────────────────┘     └─────────────────┘
+                                                          │
+                                                          ▼
+┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
+│   SharePoint    │◀────│  Microsoft       │◀────│   MSAL.js       │
+│   (Storage)     │     │  Graph API       │     │   (Token)       │
+└─────────────────┘     └──────────────────┘     └─────────────────┘</code></pre>
+
+<h3>Tech Stack</h3>
+<table>
+  <tr><th>Component</th><th>Technology</th></tr>
+  <tr><td>Frontend</td><td>React 18, Vite, Tailwind CSS</td></tr>
+  <tr><td>Authentication</td><td>MSAL.js (@azure/msal-browser, @azure/msal-react)</td></tr>
+  <tr><td>PDF Generation</td><td>jsPDF</td></tr>
+  <tr><td>Hosting</td><td>Azure Static Web Apps</td></tr>
+  <tr><td>CI/CD</td><td>GitHub Actions</td></tr>
+  <tr><td>File Storage</td><td>SharePoint via Microsoft Graph API</td></tr>
+</table>
+
+<hr>
+
+<h2>Azure AD App Registration</h2>
+
+<h3>App Details</h3>
+<table>
+  <tr><th>Setting</th><th>Value</th></tr>
+  <tr><td>Application (Client) ID</td><td><code>773142be-052d-4418-9f93-b11259f29a8e</code></td></tr>
+  <tr><td>Directory (Tenant) ID</td><td><code>5958e6e0-e873-4029-93e4-f725edbfaf78</code></td></tr>
+  <tr><td>Supported Account Types</td><td>Single tenant (Powertec only)</td></tr>
+</table>
+
+<h3>Redirect URIs</h3>
+<p>The following redirect URI must be configured as <strong>Single-page application</strong>:</p>
+<pre><code>https://projectsauditform.powertec.com.au</code></pre>
+
+<h3>API Permissions</h3>
+<table>
+  <tr><th>Permission</th><th>Type</th><th>Description</th></tr>
+  <tr><td>User.Read</td><td>Delegated</td><td>Sign in and read user profile</td></tr>
+  <tr><td>Files.ReadWrite.All</td><td>Delegated</td><td>Read and write files in all site collections</td></tr>
+  <tr><td>Sites.ReadWrite.All</td><td>Delegated</td><td>Read and write items in all site collections</td></tr>
+</table>
+
+<h3>How to Access</h3>
+<ol>
+  <li>Go to <a href="https://portal.azure.com">Azure Portal</a></li>
+  <li>Navigate to <strong>Azure Active Directory</strong> → <strong>App registrations</strong></li>
+  <li>Search for the app by Client ID or name</li>
+</ol>
+
+<hr>
+
+<h2>Azure Static Web Apps</h2>
+
+<h3>Custom Domain</h3>
+<table>
+  <tr><th>Setting</th><th>Value</th></tr>
+  <tr><td>Custom Domain</td><td>projectsauditform.powertec.com.au</td></tr>
+  <tr><td>SKU</td><td>Free</td></tr>
+</table>
+
+<div class="info">
+  <strong>Note:</strong> Authentication is handled by MSAL.js, not Azure Static Web Apps built-in auth.
+</div>
+
+<hr>
+
+<h2>SharePoint Integration</h2>
+
+<h3>Upload Location</h3>
+<table>
+  <tr><th>Setting</th><th>Value</th></tr>
+  <tr><td>Site</td><td>powertectelecom.sharepoint.com/sites/projects</td></tr>
+  <tr><td>Document Library</td><td>Documents</td></tr>
+  <tr><td>Folder</td><td>13 - Project Audit Form Submissions</td></tr>
+</table>
+
+<h3>File Naming</h3>
+<p>PDFs are saved as: <code>{ProjectCode}_{SiteName}_{Date}.pdf</code></p>
+<p>Example: <code>ABC123_TowerSite_2026-02-04.pdf</code></p>
+
+<div class="warning">
+  <strong>Important:</strong> Users must have <strong>Contribute</strong> or higher permissions on the SharePoint site to upload files.
+</div>
+
+<hr>
+
+<h2>Authentication Flow</h2>
+<ol>
+  <li>User visits https://projectsauditform.powertec.com.au</li>
+  <li>MSAL.js checks for existing session</li>
+  <li>If no session, redirects to Microsoft login</li>
+  <li>User signs in with Powertec credentials</li>
+  <li>MSAL receives access token</li>
+  <li>Token is used for SharePoint uploads via Graph API</li>
+</ol>
+
+<div class="info">
+  <strong>Security:</strong> Only users in the Powertec Azure AD tenant can sign in.
+</div>
+
+<hr>
+
+<h2>Troubleshooting</h2>
+
+<h3>"AADSTS900144: client_id" Error</h3>
+<p><strong>Cause:</strong> Environment variables misconfigured during deployment.</p>
+<p><strong>Fix:</strong> Contact Rory in IT to verify deployment configuration and trigger a rebuild.</p>
+
+<h3>"Document library not found" Error</h3>
+<p><strong>Cause:</strong> Incorrect SharePoint library name in configuration.</p>
+<p><strong>Fix:</strong></p>
+<ol>
+  <li>Verify the library name in SharePoint (usually "Documents" not "Shared Documents")</li>
+  <li>Contact Rory in IT to update the configuration</li>
+</ol>
+
+<h3>User Can't Sign In</h3>
+<p><strong>Possible Causes:</strong></p>
+<ul>
+  <li>User not in Powertec Azure AD tenant</li>
+  <li>Redirect URI mismatch</li>
+</ul>
+<p><strong>Fix:</strong></p>
+<ol>
+  <li>Verify user is a Powertec account</li>
+  <li>Check Azure AD App Registration → Authentication → Redirect URIs</li>
+  <li>Ensure <code>https://projectsauditform.powertec.com.au</code> is listed as Single-page application</li>
+</ol>
+
+<h3>Upload Fails</h3>
+<p><strong>Possible Causes:</strong></p>
+<ul>
+  <li>User lacks SharePoint permissions</li>
+  <li>Token expired</li>
+  <li>Incorrect folder path</li>
+</ul>
+<p><strong>Fix:</strong></p>
+<ol>
+  <li>Verify user has Contribute access to SharePoint site</li>
+  <li>Try refreshing the page (gets new token)</li>
+  <li>Check folder exists in SharePoint</li>
+</ol>
+
+<h3>Build Fails</h3>
+<p><strong>Fix:</strong> Contact Rory in IT to review deployment logs and resolve build errors.</p>
+
+<hr>
+
+<h2>Making Changes</h2>
+
+<p>For any changes to the application, including:</p>
+<ul>
+  <li>Updating the app code or functionality</li>
+  <li>Changing the domain</li>
+  <li>Modifying SharePoint upload location</li>
+  <li>Updating Azure AD configuration</li>
+</ul>
+
+<p><strong>Contact Rory in IT</strong> who manages the source code and deployment pipeline.</p>
+
+<hr>
+
+<h2>Key Files</h2>
+<table>
+  <tr><th>File</th><th>Purpose</th></tr>
+  <tr><td><code>src/App.jsx</code></td><td>Main application component</td></tr>
+  <tr><td><code>src/config/msalConfig.js</code></td><td>Azure AD/MSAL configuration</td></tr>
+  <tr><td><code>src/config/auditItems.js</code></td><td>Audit form questions/sections</td></tr>
+  <tr><td><code>src/services/graphApi.js</code></td><td>SharePoint upload logic</td></tr>
+  <tr><td><code>src/services/pdfGenerator.js</code></td><td>PDF generation</td></tr>
+  <tr><td><code>src/services/auth.js</code></td><td>Authentication helpers</td></tr>
+  <tr><td><code>staticwebapp.config.json</code></td><td>Azure SWA routing config</td></tr>
+  <tr><td><code>.github/workflows/*.yml</code></td><td>CI/CD pipeline</td></tr>
+</table>
+
+<hr>
+
+<hr>
+
+<h2>Support</h2>
+<p>For further information or technical assistance, please contact:</p>
+<div class="info">
+  <strong>Rory Wood</strong><br>
+  IT Department<br>
+  Powertec Telecommunications
+</div>
+
+<p style="color:#6b7280;font-size:14px;margin-top:40px;">
+  <strong>Document Version:</strong> 1.0<br>
+  <strong>Last Updated:</strong> 4 February 2026<br>
+  <strong>Powertec Telecommunications Pty Ltd</strong>
+</p>
+
+</body>
+</html>

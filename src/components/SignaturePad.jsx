@@ -106,7 +106,7 @@ export function SignaturePad({ value, onChange, label }) {
       <div className="relative">
         <canvas
           ref={canvasRef}
-          className="w-full h-32 border-2 border-gray-300 rounded-md bg-white cursor-crosshair touch-none"
+          className="w-full h-40 sm:h-32 border-2 border-gray-300 rounded-md bg-white cursor-crosshair touch-none"
           onMouseDown={startDrawing}
           onMouseMove={draw}
           onMouseUp={stopDrawing}
@@ -116,16 +116,16 @@ export function SignaturePad({ value, onChange, label }) {
           onTouchEnd={stopDrawing}
         />
         {!hasSignature && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none text-gray-400">
-            Sign here
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none text-gray-400 text-sm sm:text-base">
+            Tap and draw your signature
           </div>
         )}
       </div>
-      <div className="flex justify-between items-center mt-2">
+      <div className="flex justify-between items-center mt-3">
         <button
           type="button"
           onClick={clearSignature}
-          className="text-sm text-gray-500 hover:text-noncompliant transition-colors"
+          className="text-sm text-gray-500 hover:text-noncompliant active:text-noncompliant transition-colors py-2 px-3 -ml-3 rounded-md"
         >
           Clear Signature
         </button>

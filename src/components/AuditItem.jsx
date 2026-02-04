@@ -4,7 +4,7 @@ export function AuditItem({ item, status, notes, onStatusChange, onNotesChange }
   const [showNotes, setShowNotes] = useState(!!notes);
 
   const getButtonClass = (buttonStatus) => {
-    const base = 'px-4 py-2 text-sm font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2';
+    const base = 'px-4 py-3 sm:py-2 text-sm font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 min-w-[50px] sm:min-w-[44px]';
 
     if (status === buttonStatus) {
       switch (buttonStatus) {
@@ -19,7 +19,7 @@ export function AuditItem({ item, status, notes, onStatusChange, onNotesChange }
       }
     }
 
-    return `${base} bg-gray-100 text-gray-600 hover:bg-gray-200`;
+    return `${base} bg-gray-100 text-gray-600 hover:bg-gray-200 active:bg-gray-300`;
   };
 
   return (
@@ -52,7 +52,7 @@ export function AuditItem({ item, status, notes, onStatusChange, onNotesChange }
           <button
             type="button"
             onClick={() => setShowNotes(!showNotes)}
-            className="ml-2 p-2 text-gray-500 hover:text-primary transition-colors"
+            className="ml-1 p-3 sm:p-2 text-gray-500 hover:text-primary active:text-primary transition-colors rounded-md"
             title={showNotes ? 'Hide notes' : 'Add notes'}
           >
             <svg
