@@ -151,38 +151,52 @@ export async function generateAuditPdf(formData) {
 
   // ============ AUDIT ITEMS ============
   function drawAuditItems(section) {
+    const RED_BG = [254, 242, 242]; // Light red background for non-compliant
+    const GREEN_BG = [240, 253, 244]; // Light green background for compliant with notes
+
     section.items.forEach((item, i) => {
       const data = formData.auditItems[item.id] || {};
       const status = data.status || '';
       const notes = data.notes || '';
       const hasNotes = notes.length > 0;
+      const isNonCompliant = status === 'no';
+      const isCompliantWithNotes = status === 'yes' && hasNotes;
       const height = hasNotes ? 18 : 11;
 
       needsNewPage(height + 3);
 
-      // Background
-      if (i % 2 === 0) {
+      // Background - red for non-compliant, green for compliant with notes, alternating for others
+      if (isNonCompliant) {
+        doc.setFillColor(...RED_BG);
+      } else if (isCompliantWithNotes) {
+        doc.setFillColor(...GREEN_BG);
+      } else if (i % 2 === 0) {
         doc.setFillColor(255, 255, 255);
       } else {
         doc.setFillColor(...LIGHT_BG);
       }
       doc.rect(margin, yPos, contentWidth, height, 'F');
 
-      // Border
-      doc.setDrawColor(...BORDER);
-      doc.setLineWidth(0.15);
+      // Border - red outline for non-compliant items
+      if (isNonCompliant) {
+        doc.setDrawColor(...RED);
+        doc.setLineWidth(0.5);
+      } else {
+        doc.setDrawColor(...BORDER);
+        doc.setLineWidth(0.15);
+      }
       doc.rect(margin, yPos, contentWidth, height, 'S');
 
       // Number
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
-      doc.setTextColor(...GRAY_TEXT);
+      doc.setTextColor(isNonCompliant ? RED : GRAY_TEXT);
       doc.text(`${i + 1}.`, margin + 4, yPos + 7.5);
 
-      // Label
-      doc.setFont('helvetica', 'normal');
+      // Label - red text for non-compliant
+      doc.setFont('helvetica', isNonCompliant ? 'bold' : 'normal');
       doc.setFontSize(10);
-      doc.setTextColor(...DARK_TEXT);
+      doc.setTextColor(isNonCompliant ? RED : DARK_TEXT);
       const labelText = doc.splitTextToSize(item.label, contentWidth - 55);
       doc.text(labelText[0], margin + 14, yPos + 7.5);
 
@@ -200,11 +214,11 @@ export async function generateAuditPdf(formData) {
         doc.text(text, pageWidth - margin - 5, yPos + 7.5, { align: 'right' });
       }
 
-      // Notes
+      // Notes - red for non-compliant, gray for others
       if (hasNotes) {
         doc.setFont('helvetica', 'italic');
         doc.setFontSize(8);
-        doc.setTextColor(...GRAY_TEXT);
+        doc.setTextColor(isNonCompliant ? RED : GRAY_TEXT);
         const noteText = doc.splitTextToSize(notes, contentWidth - 25);
         doc.text(noteText[0], margin + 14, yPos + 14);
       }
