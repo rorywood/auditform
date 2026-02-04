@@ -93,6 +93,20 @@ function App() {
     setTimeout(() => setMessage(null), 5000);
   }, []);
 
+  // Clear error messages when user starts interacting with the form
+  useEffect(() => {
+    if (message?.type === 'error') {
+      setMessage(null);
+    }
+  }, [formData.projectInfo, formData.auditItems]);
+
+  // Clear field-level errors when user starts typing in project info
+  useEffect(() => {
+    if (Object.keys(errors).length > 0) {
+      setErrors({});
+    }
+  }, [formData.projectInfo]);
+
   const validateForm = useCallback(() => {
     const newErrors = {};
     const { projectCode, siteName, siteAddress, projectManager, auditor, auditDate } = formData.projectInfo;
