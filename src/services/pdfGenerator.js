@@ -123,7 +123,11 @@ export async function generateAuditPdf(formData) {
 
     for (let i = 0; i < data.length; i += 2) {
       const isEven = row % 2 === 0;
-      doc.setFillColor(isEven ? 255 : ...LIGHT_GRAY, isEven ? 255 : undefined, isEven ? 255 : undefined);
+      if (isEven) {
+        doc.setFillColor(255, 255, 255);
+      } else {
+        doc.setFillColor(...LIGHT_GRAY);
+      }
       doc.rect(margin, yPos, contentWidth, rowHeight, 'F');
 
       doc.setDrawColor(...BORDER_COLOR);
