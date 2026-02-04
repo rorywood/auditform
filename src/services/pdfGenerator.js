@@ -190,13 +190,13 @@ export async function generateAuditPdf(formData) {
       // Number
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
-      doc.setTextColor(isNonCompliant ? RED : GRAY_TEXT);
+      doc.setTextColor(...(isNonCompliant ? RED : GRAY_TEXT));
       doc.text(`${i + 1}.`, margin + 4, yPos + 7.5);
 
       // Label - red text for non-compliant
       doc.setFont('helvetica', isNonCompliant ? 'bold' : 'normal');
       doc.setFontSize(10);
-      doc.setTextColor(isNonCompliant ? RED : DARK_TEXT);
+      doc.setTextColor(...(isNonCompliant ? RED : DARK_TEXT));
       const labelText = doc.splitTextToSize(item.label, contentWidth - 55);
       doc.text(labelText[0], margin + 14, yPos + 7.5);
 
@@ -218,7 +218,7 @@ export async function generateAuditPdf(formData) {
       if (hasNotes) {
         doc.setFont('helvetica', 'italic');
         doc.setFontSize(8);
-        doc.setTextColor(isNonCompliant ? RED : GRAY_TEXT);
+        doc.setTextColor(...(isNonCompliant ? RED : GRAY_TEXT));
         const noteText = doc.splitTextToSize(notes, contentWidth - 25);
         doc.text(noteText[0], margin + 14, yPos + 14);
       }
