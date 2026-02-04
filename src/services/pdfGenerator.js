@@ -51,9 +51,9 @@ export async function generateAuditPdf(formData) {
     doc.setLineWidth(0.5);
     doc.line(0, 45, pageWidth, 45);
 
-    // Logo
+    // Logo - proper aspect ratio
     if (logoData) {
-      doc.addImage(logoData, 'PNG', margin, 10, 50, 25);
+      doc.addImage(logoData, 'PNG', margin, 12, 40, 20);
     }
 
     // Title
@@ -62,11 +62,13 @@ export async function generateAuditPdf(formData) {
     doc.setTextColor(...PRIMARY);
     doc.text('Projects Audit Form', pageWidth - margin, 25, { align: 'right' });
 
-    // Subtitle with date
+    // Subtitle with date and time
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
     doc.setTextColor(...GRAY_TEXT);
-    doc.text(`Generated ${new Date().toLocaleDateString('en-AU')}`, pageWidth - margin, 35, { align: 'right' });
+    const now = new Date();
+    const dateTime = `${now.toLocaleDateString('en-AU')} ${now.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' })}`;
+    doc.text(`Generated ${dateTime}`, pageWidth - margin, 35, { align: 'right' });
 
     return 55;
   }
@@ -269,7 +271,8 @@ export async function generateAuditPdf(formData) {
 
     if (signoff.projectManagerSignature?.startsWith('data:image')) {
       try {
-        doc.addImage(signoff.projectManagerSignature, 'PNG', margin + 40, detailY + 2, 55, 22);
+        // Smaller signature that maintains aspect ratio
+        doc.addImage(signoff.projectManagerSignature, 'PNG', margin + 40, detailY + 5, 40, 16);
       } catch (e) {
         console.warn('Could not add signature:', e);
       }
