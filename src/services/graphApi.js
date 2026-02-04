@@ -78,7 +78,6 @@ export function generateFileName(projectInfo) {
   const sanitizedProjectCode = (projectCode || 'UNKNOWN').replace(/[^a-zA-Z0-9]/g, '');
   const sanitizedSiteName = (siteName || 'Site').replace(/[^a-zA-Z0-9]/g, '');
   const dateStr = auditDate || new Date().toISOString().split('T')[0];
-  const formattedDate = dateStr.replace(/-/g, '');
 
-  return `${sanitizedProjectCode}_${sanitizedSiteName}_${formattedDate}_Audit.pdf`;
+  return `${sanitizedProjectCode}_${sanitizedSiteName}_${dateStr}.pdf`;
 }
