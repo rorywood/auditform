@@ -1,10 +1,7 @@
-import { useCallback, useMemo } from 'react';
-import { useLocalStorage } from './useLocalStorage';
+import { useCallback, useMemo, useState } from 'react';
 import { auditSections, getTotalItemCount } from '../config/auditItems';
 
-const STORAGE_KEY = 'powertec-audit-form-data';
-
-const initialFormData = {
+const getInitialFormData = () => ({
   projectInfo: {
     projectCode: '',
     siteName: '',
@@ -23,13 +20,10 @@ const initialFormData = {
     projectManagerDate: '',
     comments: '',
   },
-};
+});
 
 export function useFormData() {
-  const [formData, setFormData, clearFormData] = useLocalStorage(
-    STORAGE_KEY,
-    initialFormData
-  );
+  const [formData, setFormData] = useState(getInitialFormData);
 
   const updateProjectInfo = useCallback((field, value) => {
     setFormData((prev) => ({
@@ -175,8 +169,8 @@ export function useFormData() {
   }, [formData.projectInfo]);
 
   const resetForm = useCallback(() => {
-    clearFormData();
-  }, [clearFormData]);
+    setFormData(getInitialFormData());
+  }, []);
 
   return {
     formData,
