@@ -21,15 +21,19 @@ export function SignaturePad({ value, onChange, label }) {
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
-    // Load existing signature if present
+    // Load existing signature if present, otherwise clear
     if (value) {
       const img = new Image();
       img.onload = () => {
         ctx.drawImage(img, 0, 0, rect.width, rect.height);
       };
       img.src = value;
+      setHasSignature(true);
+    } else {
+      ctx.clearRect(0, 0, rect.width, rect.height);
+      setHasSignature(false);
     }
-  }, []);
+  }, [value]);
 
   const getCoordinates = (e) => {
     const canvas = canvasRef.current;
