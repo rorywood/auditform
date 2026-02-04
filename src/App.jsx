@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { useMsal } from '@azure/msal-react';
+import { useMsal, useIsAuthenticated } from '@azure/msal-react';
 import { useFormData } from './hooks/useFormData';
 import { ProjectInfoForm } from './components/ProjectInfoForm';
 import { SignoffForm } from './components/SignoffForm';
@@ -10,8 +10,9 @@ import { CabinetSection } from './sections/CabinetSection';
 import { DASSection } from './sections/DASSection';
 import { CommissioningSection } from './sections/CommissioningSection';
 import { ContractorSection } from './sections/ContractorSection';
-import { generateFileName } from './services/graphApi';
-import { downloadPdf } from './services/pdfGenerator';
+import { uploadToSharePoint, generateFileName } from './services/graphApi';
+import { downloadPdf, getPdfBlob } from './services/pdfGenerator';
+import { signIn, getActiveAccount } from './services/auth';
 
 const tabs = [
   { id: 'project', label: 'Project Info' },
@@ -26,11 +27,13 @@ const tabs = [
 
 function App() {
   const { instance } = useMsal();
+  const isAuthenticated = useIsAuthenticated();
   const [activeTab, setActiveTab] = useState('project');
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState(null);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState(null); // 'uploading', 'success', 'error'
 
   const {
     formData,
@@ -83,7 +86,33 @@ function App() {
     }
   }, [formData, showMessage]);
 
-  const handleSubmit = useCallback(() => {
+  const handleUploadToSharePoint = useCallback(async () => {
+    setUploadStatus('uploading');
+    try {
+      // Check if user is authenticated
+      if (!isAuthenticated) {
+        await signIn(instance);
+      }
+
+      const account = getActiveAccount(instance);
+      if (!account) {
+        throw new Error('Please sign in to upload');
+      }
+
+      const pdfBlob = await getPdfBlob(formData);
+      const fileName = generateFileName(formData.projectInfo);
+
+      await uploadToSharePoint(instance, account, pdfBlob, fileName);
+      setUploadStatus('success');
+      showMessage('Audit uploaded to SharePoint successfully', 'success');
+    } catch (error) {
+      console.error('Upload error:', error);
+      setUploadStatus('error');
+      showMessage(`Upload failed: ${error.message}`, 'error');
+    }
+  }, [formData, isAuthenticated, instance, showMessage]);
+
+  const handleSubmit = useCallback(async () => {
     if (!validateForm()) {
       showMessage('Please fill in all required project information', 'error');
       setActiveTab('project');
@@ -107,13 +136,38 @@ function App() {
       return;
     }
 
+    // Show modal and start upload
     setShowCompletionModal(true);
-  }, [validateForm, showMessage, getIncompleteItems, formData.signoff]);
+    setUploadStatus('uploading');
+
+    // Auto-upload to SharePoint
+    try {
+      if (!isAuthenticated) {
+        await signIn(instance);
+      }
+
+      const account = getActiveAccount(instance);
+      if (!account) {
+        throw new Error('Please sign in to upload');
+      }
+
+      const pdfBlob = await getPdfBlob(formData);
+      const fileName = generateFileName(formData.projectInfo);
+
+      await uploadToSharePoint(instance, account, pdfBlob, fileName);
+      setUploadStatus('success');
+    } catch (error) {
+      console.error('Upload error:', error);
+      setUploadStatus('error');
+    }
+  }, [validateForm, showMessage, getIncompleteItems, formData, isAuthenticated, instance]);
 
   const handleResetForm = useCallback(() => {
     if (window.confirm('Are you sure you want to reset the form? All data will be lost.')) {
       resetForm();
       setActiveTab('project');
+      setShowCompletionModal(false);
+      setUploadStatus(null);
       showMessage('Form has been reset', 'info');
     }
   }, [resetForm, showMessage]);
@@ -222,33 +276,89 @@ function App() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
             <div className="text-center">
-              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-compliant mb-4">
-                <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Audit Complete!</h3>
-              <p className="text-gray-600 mb-6">
-                Your audit has been submitted successfully. Would you like to download a PDF copy?
-              </p>
-              <div className="flex gap-3 justify-center">
-                <button
-                  onClick={() => setShowCompletionModal(false)}
-                  className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
-                >
-                  No Thanks
-                </button>
-                <button
-                  onClick={async () => {
-                    await handleDownloadPdf();
-                    setShowCompletionModal(false);
-                  }}
-                  disabled={isLoading}
-                  className="px-6 py-2 bg-primary text-white rounded-md hover:bg-blue-800 transition-colors disabled:opacity-50"
-                >
-                  {isLoading ? 'Generating...' : 'Download PDF'}
-                </button>
-              </div>
+              {uploadStatus === 'uploading' && (
+                <>
+                  <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-primary mb-4">
+                    <svg className="animate-spin h-6 w-6 text-white" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Uploading Audit...</h3>
+                  <p className="text-gray-600">Please wait while your audit is uploaded to SharePoint.</p>
+                </>
+              )}
+
+              {uploadStatus === 'success' && (
+                <>
+                  <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-compliant mb-4">
+                    <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Audit Submitted!</h3>
+                  <p className="text-gray-600 mb-6">
+                    Your audit has been uploaded to SharePoint successfully. Would you like to download a PDF copy?
+                  </p>
+                  <div className="flex gap-3 justify-center">
+                    <button
+                      onClick={() => {
+                        setShowCompletionModal(false);
+                        resetForm();
+                        setActiveTab('project');
+                        setUploadStatus(null);
+                      }}
+                      className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                    >
+                      Done
+                    </button>
+                    <button
+                      onClick={async () => {
+                        await handleDownloadPdf();
+                      }}
+                      disabled={isLoading}
+                      className="px-6 py-2 bg-primary text-white rounded-md hover:bg-blue-800 transition-colors disabled:opacity-50"
+                    >
+                      {isLoading ? 'Generating...' : 'Download PDF'}
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {uploadStatus === 'error' && (
+                <>
+                  <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-noncompliant mb-4">
+                    <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Upload Failed</h3>
+                  <p className="text-gray-600 mb-6">
+                    There was a problem uploading to SharePoint. You can try again or download the PDF manually.
+                  </p>
+                  <div className="flex gap-3 justify-center flex-wrap">
+                    <button
+                      onClick={() => setShowCompletionModal(false)}
+                      className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                    >
+                      Close
+                    </button>
+                    <button
+                      onClick={handleUploadToSharePoint}
+                      className="px-6 py-2 bg-primary text-white rounded-md hover:bg-blue-800 transition-colors"
+                    >
+                      Try Again
+                    </button>
+                    <button
+                      onClick={handleDownloadPdf}
+                      disabled={isLoading}
+                      className="px-6 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors disabled:opacity-50"
+                    >
+                      Download PDF
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>

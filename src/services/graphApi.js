@@ -30,6 +30,7 @@ export async function uploadToSharePoint(msalInstance, account, fileContent, fil
 
   const siteUrl = graphConfig.sharepointSiteUrl;
   const library = graphConfig.documentLibrary;
+  const folder = graphConfig.uploadFolder;
 
   const siteResponse = await callGraphApi(
     accessToken,
@@ -51,7 +52,9 @@ export async function uploadToSharePoint(msalInstance, account, fileContent, fil
     throw new Error(`Document library "${library}" not found`);
   }
 
-  const uploadUrl = `/drives/${targetDrive.id}/root:/${fileName}:/content`;
+  // Upload to the specified folder
+  const folderPath = folder ? `${folder}/${fileName}` : fileName;
+  const uploadUrl = `/drives/${targetDrive.id}/root:/${folderPath}:/content`;
 
   const uploadResponse = await fetch(`${GRAPH_BASE_URL}${uploadUrl}`, {
     method: 'PUT',

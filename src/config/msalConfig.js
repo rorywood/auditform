@@ -17,6 +17,7 @@ export const loginRequest = {
 
 export const graphConfig = {
   graphMeEndpoint: 'https://graph.microsoft.com/v1.0/me',
-  sharepointSiteUrl: import.meta.env.VITE_SHAREPOINT_SITE_URL || 'powertectelecom.sharepoint.com:/sites/intranet',
-  documentLibrary: import.meta.env.VITE_SHAREPOINT_LIBRARY || 'Project Audits',
+  sharepointSiteUrl: import.meta.env.VITE_SHAREPOINT_SITE_URL || 'powertectelecom.sharepoint.com:/sites/projects',
+  documentLibrary: import.meta.env.VITE_SHAREPOINT_LIBRARY || 'Shared Documents',
+  uploadFolder: import.meta.env.VITE_SHAREPOINT_FOLDER || '13 - Project Audit Form Submissions',
 };
