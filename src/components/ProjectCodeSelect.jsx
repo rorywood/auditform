@@ -138,9 +138,9 @@ export function ProjectCodeSelect({ value, onChange, error }) {
           onChange={(e) => {
             setSearchText(e.target.value);
             setIsOpen(true);
-            // Clear the selected value if the user is typing something different
+            // Clear the selected value while user is typing/searching
             if (e.target.value !== value) {
-              onChange(e.target.value);
+              onChange('');
             }
           }}
           onFocus={() => setIsOpen(true)}
