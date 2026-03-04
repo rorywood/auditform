@@ -366,6 +366,14 @@ function App() {
         showMessage('Please complete all project information before continuing', 'error');
         return;
       }
+
+      // Warn if an existing audit form was found
+      const hasExistingAudit = projectStructure?.isoFiles?.some(f => f.isAuditForm);
+      if (hasExistingAudit) {
+        if (!window.confirm('An audit form already exists for this project. Are you sure you want to continue and submit another one?')) {
+          return;
+        }
+      }
     }
 
     // Check audit sections for completion and notes
