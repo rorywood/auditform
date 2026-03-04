@@ -512,11 +512,18 @@ function App() {
                   <p className="text-gray-600 mb-4">
                     Your audit has been uploaded to SharePoint successfully. Would you like to download a PDF copy?
                   </p>
-                  <img
-                    src="/surfing.gif"
-                    alt="Surfing celebration"
-                    className="w-full max-w-xs mx-auto rounded-lg mb-4"
-                  />
+                  {(() => {
+                    const account = getActiveAccount(instance);
+                    const name = account?.name?.toLowerCase() || '';
+                    const showGif = ['brodie tarrant', 'rory wood'].some(n => name.includes(n));
+                    return showGif ? (
+                      <img
+                        src="/surfing.gif"
+                        alt="Surfing celebration"
+                        className="w-full max-w-xs mx-auto rounded-lg mb-4"
+                      />
+                    ) : null;
+                  })()}
                   <div className="flex gap-3 justify-center">
                     <button
                       onClick={() => {
