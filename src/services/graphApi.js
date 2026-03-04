@@ -140,25 +140,39 @@ export async function getProjectFolders(msalInstance, account) {
   return foldersResponse.value.map((folder) => folder.name);
 }
 
-export async function listFolderDocuments(msalInstance, account, projectCode) {
-  const accessToken = await acquireToken(msalInstance, account);
-  const drive = await getSolutionsDrive(accessToken);
-
-  const folderPath = `General/${projectCode}/${UPLOAD_PARENT}/${UPLOAD_SUBFOLDER}`;
-
+async function listChildren(accessToken, driveId, folderPath) {
   const response = await fetch(
-    `${GRAPH_BASE_URL}/drives/${drive.id}/root:/${folderPath}:/children?$select=name,file,lastModifiedDateTime,lastModifiedBy`,
+    `${GRAPH_BASE_URL}/drives/${driveId}/root:/${folderPath}:/children?$select=name,file,folder,lastModifiedDateTime,lastModifiedBy&$orderby=name`,
     {
       headers: { Authorization: `Bearer ${accessToken}` },
     }
   );
 
-  if (response.status === 404 || !response.ok) {
-    return [];
-  }
+  if (response.status === 404 || !response.ok) return [];
 
   const data = await response.json();
-  return (data.value || [])
+  return data.value || [];
+}
+
+export async function getProjectStructure(msalInstance, account, projectCode) {
+  const accessToken = await acquireToken(msalInstance, account);
+  const drive = await getSolutionsDrive(accessToken);
+
+  // Get project root folders
+  const rootItems = await listChildren(accessToken, drive.id, `General/${projectCode}`);
+  const rootFolders = rootItems
+    .filter((item) => item.folder)
+    .map((item) => item.name);
+
+  // Get 04-Project Team subfolders
+  const teamItems = await listChildren(accessToken, drive.id, `General/${projectCode}/${UPLOAD_PARENT}`);
+  const teamFolders = teamItems
+    .filter((item) => item.folder)
+    .map((item) => item.name);
+
+  // Get files in 05-ISO Project Documents
+  const isoItems = await listChildren(accessToken, drive.id, `General/${projectCode}/${UPLOAD_PARENT}/${UPLOAD_SUBFOLDER}`);
+  const isoFiles = isoItems
     .filter((item) => item.file)
     .map((item) => ({
       name: item.name,
@@ -166,6 +180,8 @@ export async function listFolderDocuments(msalInstance, account, projectCode) {
       modifiedBy: item.lastModifiedBy?.user?.displayName || 'Unknown',
       isAuditForm: item.name.toLowerCase().includes('_auditform_') && item.name.toLowerCase().endsWith('.pdf'),
     }));
+
+  return { rootFolders, teamFolders, isoFiles };
 }
 
 export function generateFileName(projectInfo) {

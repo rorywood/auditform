@@ -10,7 +10,7 @@ import { CabinetSection } from './sections/CabinetSection';
 import { DASSection } from './sections/DASSection';
 import { CommissioningSection } from './sections/CommissioningSection';
 import { ContractorSection } from './sections/ContractorSection';
-import { uploadToSharePoint, generateFileName, checkProjectFolder, createProjectFolder, listFolderDocuments } from './services/graphApi';
+import { uploadToSharePoint, generateFileName, checkProjectFolder, createProjectFolder, getProjectStructure } from './services/graphApi';
 import { downloadPdf, getPdfBlob } from './services/pdfGenerator';
 import { signIn, getActiveAccount } from './services/auth';
 import { loginRequest } from './config/msalConfig';
@@ -37,7 +37,7 @@ function App() {
   const [uploadStatus, setUploadStatus] = useState(null); // 'uploading', 'success', 'error'
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [folderStatus, setFolderStatus] = useState(null); // null = not checked, 'checking', 'exists', 'missing', 'creating'
-  const [folderDocuments, setFolderDocuments] = useState([]);
+  const [projectStructure, setProjectStructure] = useState(null);
 
   // Auto sign-in with MSAL when app loads
   useEffect(() => {
@@ -95,7 +95,7 @@ function App() {
     const projectCode = formData.projectInfo.projectCode;
     if (!projectCode || !isAuthReady) {
       setFolderStatus(null);
-      setFolderDocuments([]);
+      setProjectStructure(null);
       return;
     }
 
@@ -106,19 +106,17 @@ function App() {
       if (!account) return;
 
       setFolderStatus('checking');
-      setFolderDocuments([]);
+      setProjectStructure(null);
       try {
         const exists = await checkProjectFolder(instance, account, projectCode);
         if (!cancelled) {
           setFolderStatus(exists ? 'exists' : 'missing');
 
-          if (exists) {
-            try {
-              const docs = await listFolderDocuments(instance, account, projectCode);
-              if (!cancelled) setFolderDocuments(docs);
-            } catch {
-              // Don't block if listing fails
-            }
+          try {
+            const structure = await getProjectStructure(instance, account, projectCode);
+            if (!cancelled) setProjectStructure(structure);
+          } catch {
+            // Don't block if listing fails
           }
         }
       } catch {
@@ -288,7 +286,7 @@ function App() {
       setShowCompletionModal(false);
       setUploadStatus(null);
       setFolderStatus(null);
-      setFolderDocuments([]);
+      setProjectStructure(null);
       showMessage('Form has been reset', 'info');
     }
   }, [resetForm, showMessage]);
@@ -451,43 +449,122 @@ function App() {
                 <p className="text-sm text-gray-500">Checking project folder...</p>
               </div>
             )}
-            {folderStatus === 'exists' && folderDocuments.length > 0 && (
+            {projectStructure && formData.projectInfo.projectCode && (
               <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <svg className="h-5 w-5 text-primary flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <h3 className="font-semibold text-primary">
-                    Heads up! {folderDocuments.length} document{folderDocuments.length !== 1 ? 's' : ''} already in this folder
-                  </h3>
-                </div>
-                <ul className="space-y-1.5">
-                  {folderDocuments.map((doc) => (
-                    <li
-                      key={doc.name}
-                      className={`flex items-center gap-2 text-sm px-2 py-1.5 rounded ${
-                        doc.isAuditForm
-                          ? 'bg-green-50 text-compliant font-medium'
-                          : 'text-gray-600'
-                      }`}
-                    >
-                      <svg className={`h-4 w-4 flex-shrink-0 ${doc.isAuditForm ? 'text-compliant' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        {doc.isAuditForm ? (
+                {(() => {
+                  const auditCount = projectStructure.isoFiles.filter(f => f.isAuditForm).length;
+                  const totalCount = projectStructure.isoFiles.length;
+
+                  if (auditCount > 0) {
+                    return (
+                      <div className="flex items-center gap-2 mb-3 bg-green-50 border border-green-200 rounded-md px-3 py-2">
+                        <svg className="h-5 w-5 text-compliant flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        ) : (
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                        )}
+                        </svg>
+                        <h3 className="font-semibold text-compliant">
+                          Heads up! We found {auditCount > 1 ? `${auditCount} audit forms` : 'an existing audit form'} in this project ({totalCount} document{totalCount !== 1 ? 's' : ''} total)
+                        </h3>
+                      </div>
+                    );
+                  }
+
+                  if (totalCount > 0) {
+                    return (
+                      <div className="flex items-center gap-2 mb-3">
+                        <svg className="h-5 w-5 text-primary flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <h3 className="font-semibold text-primary">
+                          Heads up! {totalCount} document{totalCount !== 1 ? 's' : ''} already in this folder
+                        </h3>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="flex items-center gap-2 mb-3">
+                      <svg className="h-5 w-5 text-primary flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                       </svg>
-                      <span className="truncate">{doc.name}</span>
-                      {doc.isAuditForm && (
-                        <>
-                          <span className="text-xs text-green-600 flex-shrink-0">- {doc.modifiedBy}, {doc.lastModified}</span>
-                          <span className="text-xs bg-compliant text-white px-1.5 py-0.5 rounded flex-shrink-0">Audit Form</span>
-                        </>
-                      )}
-                    </li>
-                  ))}
-                </ul>
+                      <h3 className="font-semibold text-primary">Project Folder Structure</h3>
+                    </div>
+                  );
+                })()}
+
+                <div className="text-sm font-mono">
+                  {/* Project root */}
+                  <div className="font-semibold text-gray-700 mb-1">{formData.projectInfo.projectCode}/</div>
+
+                  {/* Root folders */}
+                  {projectStructure.rootFolders.map((folder, i) => {
+                    const isTeamFolder = folder === '04-Project Team';
+                    const isLast = i === projectStructure.rootFolders.length - 1 && !isTeamFolder;
+
+                    return (
+                      <div key={folder}>
+                        <div className={`flex items-center gap-1.5 pl-4 ${isTeamFolder ? 'text-primary font-medium' : 'text-gray-500'}`}>
+                          <span className="text-gray-300">{isLast ? '\u2514\u2500' : '\u251C\u2500'}</span>
+                          <svg className="h-3.5 w-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                          </svg>
+                          <span>{folder}/</span>
+                        </div>
+
+                        {/* Show 04-Project Team subfolders */}
+                        {isTeamFolder && projectStructure.teamFolders.map((subFolder, j) => {
+                          const isIsoFolder = subFolder === '05-ISO Project Documents';
+                          const isSubLast = j === projectStructure.teamFolders.length - 1 && !isIsoFolder;
+
+                          return (
+                            <div key={subFolder}>
+                              <div className={`flex items-center gap-1.5 pl-12 ${isIsoFolder ? 'text-primary font-medium' : 'text-gray-500'}`}>
+                                <span className="text-gray-300">{isSubLast ? '\u2514\u2500' : '\u251C\u2500'}</span>
+                                <svg className="h-3.5 w-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                                </svg>
+                                <span>{subFolder}/</span>
+                              </div>
+
+                              {/* Show files inside 05-ISO Project Documents */}
+                              {isIsoFolder && projectStructure.isoFiles.length > 0 && (
+                                <div className="ml-20 mt-1 mb-1 space-y-1">
+                                  {projectStructure.isoFiles.map((doc) => (
+                                    <div
+                                      key={doc.name}
+                                      className={`flex items-center gap-2 text-sm px-2 py-1.5 rounded ${
+                                        doc.isAuditForm
+                                          ? 'bg-green-50 text-compliant font-medium'
+                                          : 'text-gray-600'
+                                      }`}
+                                    >
+                                      <svg className={`h-4 w-4 flex-shrink-0 ${doc.isAuditForm ? 'text-compliant' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        {doc.isAuditForm ? (
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        ) : (
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                        )}
+                                      </svg>
+                                      <span className="truncate font-sans">{doc.name}</span>
+                                      {doc.isAuditForm && (
+                                        <>
+                                          <span className="text-xs text-green-600 flex-shrink-0 font-sans">- {doc.modifiedBy}, {doc.lastModified}</span>
+                                          <span className="text-xs bg-compliant text-white px-1.5 py-0.5 rounded flex-shrink-0 font-sans">Audit Form</span>
+                                        </>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              {isIsoFolder && projectStructure.isoFiles.length === 0 && (
+                                <div className="ml-20 mt-1 mb-1 text-xs text-gray-400 italic font-sans">No documents yet</div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </>
