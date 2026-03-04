@@ -142,7 +142,7 @@ export async function getProjectFolders(msalInstance, account) {
 
 async function listChildren(accessToken, driveId, folderPath) {
   const response = await fetch(
-    `${GRAPH_BASE_URL}/drives/${driveId}/root:/${folderPath}:/children?$select=name,file,folder,webUrl,lastModifiedDateTime,lastModifiedBy&$orderby=name`,
+    `${GRAPH_BASE_URL}/drives/${driveId}/root:/${folderPath}:/children?$select=id,name,file,folder,webUrl,lastModifiedDateTime,lastModifiedBy&$orderby=name`,
     {
       headers: { Authorization: `Bearer ${accessToken}` },
     }
@@ -175,6 +175,8 @@ export async function getProjectStructure(msalInstance, account, projectCode) {
   const isoFiles = isoItems
     .filter((item) => item.file)
     .map((item) => ({
+      id: item.id,
+      driveId: drive.id,
       name: item.name,
       webUrl: item.webUrl,
       lastModified: new Date(item.lastModifiedDateTime).toLocaleDateString('en-AU'),
@@ -183,6 +185,29 @@ export async function getProjectStructure(msalInstance, account, projectCode) {
     }));
 
   return { rootFolders, teamFolders, isoFiles };
+}
+
+export async function getPreviewUrl(msalInstance, account, driveId, itemId) {
+  const accessToken = await acquireToken(msalInstance, account);
+
+  const response = await fetch(
+    `${GRAPH_BASE_URL}/drives/${driveId}/items/${itemId}/preview`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: '{}',
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error('Failed to get preview URL');
+  }
+
+  const data = await response.json();
+  return data.getUrl;
 }
 
 export function generateFileName(projectInfo) {

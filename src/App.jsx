@@ -10,7 +10,7 @@ import { CabinetSection } from './sections/CabinetSection';
 import { DASSection } from './sections/DASSection';
 import { CommissioningSection } from './sections/CommissioningSection';
 import { ContractorSection } from './sections/ContractorSection';
-import { uploadToSharePoint, generateFileName, checkProjectFolder, createProjectFolder, getProjectStructure } from './services/graphApi';
+import { uploadToSharePoint, generateFileName, checkProjectFolder, createProjectFolder, getProjectStructure, getPreviewUrl } from './services/graphApi';
 import { downloadPdf, getPdfBlob } from './services/pdfGenerator';
 import { signIn, getActiveAccount } from './services/auth';
 import { loginRequest } from './config/msalConfig';
@@ -39,6 +39,8 @@ function App() {
   const [folderStatus, setFolderStatus] = useState(null); // null = not checked, 'checking', 'exists', 'missing', 'creating'
   const [projectStructure, setProjectStructure] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
+  const [previewWebUrl, setPreviewWebUrl] = useState(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
   const [showAuditConfirm, setShowAuditConfirm] = useState(false);
 
   // Auto sign-in with MSAL when app loads
@@ -578,16 +580,39 @@ function App() {
                                         <>
                                           <span className="text-xs text-green-600 flex-shrink-0 font-sans">- {doc.modifiedBy}, {doc.lastModified}</span>
                                           <span className="text-xs bg-compliant text-white px-1.5 py-0.5 rounded flex-shrink-0 font-sans">Audit Form</span>
-                                          {doc.webUrl && (
+                                          {doc.id && (
                                             <button
-                                              onClick={() => setPreviewUrl(doc.webUrl)}
-                                              className="inline-flex items-center gap-1 text-xs bg-primary text-white px-2 py-0.5 rounded hover:bg-blue-800 transition-colors flex-shrink-0 font-sans"
+                                              onClick={async () => {
+                                                setPreviewLoading(true);
+                                                setPreviewWebUrl(doc.webUrl);
+                                                try {
+                                                  const account = getActiveAccount(instance);
+                                                  if (!account) throw new Error('Not signed in');
+                                                  const url = await getPreviewUrl(instance, account, doc.driveId, doc.id);
+                                                  setPreviewUrl(url);
+                                                } catch (err) {
+                                                  console.error('Preview failed:', err);
+                                                  // Fallback: open in new tab
+                                                  window.open(doc.webUrl, '_blank');
+                                                } finally {
+                                                  setPreviewLoading(false);
+                                                }
+                                              }}
+                                              disabled={previewLoading}
+                                              className="inline-flex items-center gap-1 text-xs bg-primary text-white px-2 py-0.5 rounded hover:bg-blue-800 transition-colors flex-shrink-0 font-sans disabled:opacity-50"
                                             >
-                                              <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                              </svg>
-                                              Preview
+                                              {previewLoading ? (
+                                                <svg className="animate-spin h-3 w-3" fill="none" viewBox="0 0 24 24">
+                                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                                </svg>
+                                              ) : (
+                                                <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                </svg>
+                                              )}
+                                              {previewLoading ? 'Loading...' : 'Preview'}
                                             </button>
                                           )}
                                         </>
@@ -700,16 +725,18 @@ function App() {
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
               <h3 className="font-semibold text-gray-900">Audit Form Preview</h3>
               <div className="flex items-center gap-2">
-                <a
-                  href={previewUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-primary hover:text-blue-800 transition-colors"
-                >
-                  Open in SharePoint
-                </a>
+                {previewWebUrl && (
+                  <a
+                    href={previewWebUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-primary hover:text-blue-800 transition-colors"
+                  >
+                    Open in SharePoint
+                  </a>
+                )}
                 <button
-                  onClick={() => setPreviewUrl(null)}
+                  onClick={() => { setPreviewUrl(null); setPreviewWebUrl(null); }}
                   className="text-gray-400 hover:text-gray-600 transition-colors"
                 >
                   <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -723,6 +750,7 @@ function App() {
                 src={previewUrl}
                 className="w-full h-full border-0"
                 title="Audit Form Preview"
+                allow="fullscreen"
               />
             </div>
           </div>
