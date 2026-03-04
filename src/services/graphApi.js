@@ -63,8 +63,16 @@ async function checkFolderExists(accessToken, driveId, folderPath) {
 export async function checkProjectFolder(msalInstance, account, projectCode) {
   const accessToken = await acquireToken(msalInstance, account);
   const drive = await getSolutionsDrive(accessToken);
-  const folderPath = `General/${projectCode}/${UPLOAD_PARENT}/${UPLOAD_SUBFOLDER}`;
-  return checkFolderExists(accessToken, drive.id, folderPath);
+
+  // Check inside 04-Project Team first (preferred)
+  const primaryPath = `General/${projectCode}/${UPLOAD_PARENT}/${UPLOAD_SUBFOLDER}`;
+  if (await checkFolderExists(accessToken, drive.id, primaryPath)) {
+    return true;
+  }
+
+  // Fall back to root of project folder
+  const fallbackPath = `General/${projectCode}/${UPLOAD_SUBFOLDER}`;
+  return checkFolderExists(accessToken, drive.id, fallbackPath);
 }
 
 export async function createProjectFolder(msalInstance, account, projectCode) {
@@ -99,12 +107,17 @@ export async function uploadToSharePoint(msalInstance, account, fileContent, fil
   const accessToken = await acquireToken(msalInstance, account);
   const drive = await getSolutionsDrive(accessToken);
 
-  // Check that the 05-ISO Project Documents folder exists
-  const folderPath = `General/${projectCode}/${UPLOAD_PARENT}/${UPLOAD_SUBFOLDER}`;
-  const exists = await checkFolderExists(accessToken, drive.id, folderPath);
+  // Check 04-Project Team path first, then fall back to root
+  const primaryPath = `General/${projectCode}/${UPLOAD_PARENT}/${UPLOAD_SUBFOLDER}`;
+  const fallbackPath = `General/${projectCode}/${UPLOAD_SUBFOLDER}`;
 
-  if (!exists) {
-    throw new Error(`The folder "${UPLOAD_SUBFOLDER}" does not exist for this project. Please create it in SharePoint before submitting.`);
+  let folderPath;
+  if (await checkFolderExists(accessToken, drive.id, primaryPath)) {
+    folderPath = primaryPath;
+  } else if (await checkFolderExists(accessToken, drive.id, fallbackPath)) {
+    folderPath = fallbackPath;
+  } else {
+    throw new Error(`The folder "${UPLOAD_SUBFOLDER}" does not exist for this project. Please create it before submitting.`);
   }
 
   // Upload PDF into the folder
@@ -144,46 +157,43 @@ export async function checkExistingAudit(msalInstance, account, projectCode) {
   const accessToken = await acquireToken(msalInstance, account);
   const drive = await getSolutionsDrive(accessToken);
 
-  const folderPath = `General/${projectCode}/${UPLOAD_PARENT}/${UPLOAD_SUBFOLDER}`;
+  // Check both possible locations
+  const paths = [
+    `General/${projectCode}/${UPLOAD_PARENT}/${UPLOAD_SUBFOLDER}`,
+    `General/${projectCode}/${UPLOAD_SUBFOLDER}`,
+  ];
 
-  // Try to list contents of the 07-Audit Form folder
-  const response = await fetch(
-    `${GRAPH_BASE_URL}/drives/${drive.id}/root:/${folderPath}:/children?$select=name,file,lastModifiedDateTime,lastModifiedBy`,
-    {
-      headers: { Authorization: `Bearer ${accessToken}` },
+  for (const folderPath of paths) {
+    const response = await fetch(
+      `${GRAPH_BASE_URL}/drives/${drive.id}/root:/${folderPath}:/children?$select=name,file,lastModifiedDateTime,lastModifiedBy`,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }
+    );
+
+    if (response.status === 404) continue;
+    if (!response.ok) continue;
+
+    const data = await response.json();
+    const pdfs = (data.value || []).filter(
+      (item) => item.file && item.name.toLowerCase().endsWith('.pdf')
+    );
+
+    if (pdfs.length > 0) {
+      const latest = pdfs.sort(
+        (a, b) => new Date(b.lastModifiedDateTime) - new Date(a.lastModifiedDateTime)
+      )[0];
+
+      return {
+        fileName: latest.name,
+        lastModified: new Date(latest.lastModifiedDateTime).toLocaleDateString('en-AU'),
+        modifiedBy: latest.lastModifiedBy?.user?.displayName || 'Unknown',
+        count: pdfs.length,
+      };
     }
-  );
-
-  // 404 = folder doesn't exist, so no existing audit
-  if (response.status === 404) {
-    return null;
   }
 
-  if (!response.ok) {
-    return null; // Don't block the user if the check fails
-  }
-
-  const data = await response.json();
-  // Filter for PDF files only (items with a file facet and .pdf extension)
-  const pdfs = (data.value || []).filter(
-    (item) => item.file && item.name.toLowerCase().endsWith('.pdf')
-  );
-
-  if (pdfs.length === 0) {
-    return null;
-  }
-
-  // Return info about the most recent PDF
-  const latest = pdfs.sort(
-    (a, b) => new Date(b.lastModifiedDateTime) - new Date(a.lastModifiedDateTime)
-  )[0];
-
-  return {
-    fileName: latest.name,
-    lastModified: new Date(latest.lastModifiedDateTime).toLocaleDateString('en-AU'),
-    modifiedBy: latest.lastModifiedBy?.user?.displayName || 'Unknown',
-    count: pdfs.length,
-  };
+  return null;
 }
 
 export function generateFileName(projectInfo) {
