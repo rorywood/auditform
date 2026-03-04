@@ -470,23 +470,35 @@ function App() {
 
                   if (totalCount > 0) {
                     return (
-                      <div className="flex items-center gap-2 mb-3">
-                        <svg className="h-5 w-5 text-primary flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      <div className="flex items-start gap-2 mb-3 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                        <svg className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
                         </svg>
-                        <h3 className="font-semibold text-primary">
-                          Heads up! {totalCount} document{totalCount !== 1 ? 's' : ''} already in this folder
-                        </h3>
+                        <div>
+                          <h3 className="font-semibold text-amber-800">
+                            Hmm, we can't find an existing audit form for this project
+                          </h3>
+                          <p className="text-sm text-amber-700 mt-0.5">
+                            We found {totalCount} document{totalCount !== 1 ? 's' : ''} in the folder. You can continue, but please double check the files below.
+                          </p>
+                        </div>
                       </div>
                     );
                   }
 
                   return (
-                    <div className="flex items-center gap-2 mb-3">
-                      <svg className="h-5 w-5 text-primary flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                    <div className="flex items-start gap-2 mb-3 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                      <svg className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
                       </svg>
-                      <h3 className="font-semibold text-primary">Project Folder Structure</h3>
+                      <div>
+                        <h3 className="font-semibold text-amber-800">
+                          No audit form found for this project
+                        </h3>
+                        <p className="text-sm text-amber-700 mt-0.5">
+                          The folder is empty. You can continue to submit a new audit form.
+                        </p>
+                      </div>
                     </div>
                   );
                 })()}
