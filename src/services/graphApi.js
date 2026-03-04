@@ -187,8 +187,8 @@ export async function getProjectStructure(msalInstance, account, projectCode) {
 
 export function generateFileName(projectInfo) {
   const { projectCode, siteName, auditDate } = projectInfo;
-  const sanitizedProjectCode = (projectCode || 'UNKNOWN').replace(/[^a-zA-Z0-9]/g, '');
-  const sanitizedSiteName = (siteName || 'Site').replace(/[^a-zA-Z0-9]/g, '');
+  const sanitizedProjectCode = (projectCode || 'UNKNOWN').replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_-]/g, '');
+  const sanitizedSiteName = (siteName || 'Site').replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_-]/g, '');
   const dateStr = auditDate || new Date().toISOString().split('T')[0];
 
   return `${sanitizedProjectCode}_${sanitizedSiteName}_AuditForm_${dateStr}.pdf`;

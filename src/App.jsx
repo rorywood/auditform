@@ -38,6 +38,8 @@ function App() {
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [folderStatus, setFolderStatus] = useState(null); // null = not checked, 'checking', 'exists', 'missing', 'creating'
   const [projectStructure, setProjectStructure] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [showAuditConfirm, setShowAuditConfirm] = useState(false);
 
   // Auto sign-in with MSAL when app loads
   useEffect(() => {
@@ -370,9 +372,8 @@ function App() {
       // Warn if an existing audit form was found
       const hasExistingAudit = projectStructure?.isoFiles?.some(f => f.isAuditForm);
       if (hasExistingAudit) {
-        if (!window.confirm('An audit form already exists for this project. Are you sure you want to continue and submit another one?')) {
-          return;
-        }
+        setShowAuditConfirm(true);
+        return;
       }
     }
 
@@ -393,7 +394,15 @@ function App() {
       setActiveTab(tabs[currentTabIndex + 1].id);
       window.scrollTo(0, 0);
     }
-  }, [currentTabIndex, activeTab, isProjectInfoComplete, validateForm, showMessage, getSectionIssues]);
+  }, [currentTabIndex, activeTab, isProjectInfoComplete, validateForm, showMessage, getSectionIssues, projectStructure, folderStatus]);
+
+  const confirmAndProceed = useCallback(() => {
+    setShowAuditConfirm(false);
+    if (currentTabIndex < tabs.length - 1) {
+      setActiveTab(tabs[currentTabIndex + 1].id);
+      window.scrollTo(0, 0);
+    }
+  }, [currentTabIndex]);
 
   const goToPreviousTab = useCallback(() => {
     if (currentTabIndex > 0) {
@@ -570,10 +579,8 @@ function App() {
                                           <span className="text-xs text-green-600 flex-shrink-0 font-sans">- {doc.modifiedBy}, {doc.lastModified}</span>
                                           <span className="text-xs bg-compliant text-white px-1.5 py-0.5 rounded flex-shrink-0 font-sans">Audit Form</span>
                                           {doc.webUrl && (
-                                            <a
-                                              href={doc.webUrl}
-                                              target="_blank"
-                                              rel="noopener noreferrer"
+                                            <button
+                                              onClick={() => setPreviewUrl(doc.webUrl)}
                                               className="inline-flex items-center gap-1 text-xs bg-primary text-white px-2 py-0.5 rounded hover:bg-blue-800 transition-colors flex-shrink-0 font-sans"
                                             >
                                               <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -581,7 +588,7 @@ function App() {
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                               </svg>
                                               Preview
-                                            </a>
+                                            </button>
                                           )}
                                         </>
                                       )}
@@ -683,6 +690,75 @@ function App() {
           }`}
         >
           {message.text}
+        </div>
+      )}
+
+      {/* PDF Preview Modal */}
+      {previewUrl && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+              <h3 className="font-semibold text-gray-900">Audit Form Preview</h3>
+              <div className="flex items-center gap-2">
+                <a
+                  href={previewUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-primary hover:text-blue-800 transition-colors"
+                >
+                  Open in SharePoint
+                </a>
+                <button
+                  onClick={() => setPreviewUrl(null)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <iframe
+                src={previewUrl}
+                className="w-full h-full border-0"
+                title="Audit Form Preview"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Audit Exists Confirmation Modal */}
+      {showAuditConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex-shrink-0 h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center">
+                <svg className="h-5 w-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900">Audit form already exists</h3>
+            </div>
+            <p className="text-gray-600 mb-6">
+              An audit form has already been submitted for this project. Are you sure you want to continue and submit another one?
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowAuditConfirm(false)}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+              >
+                Go Back
+              </button>
+              <button
+                onClick={confirmAndProceed}
+                className="px-4 py-2 bg-primary text-white rounded-md hover:bg-blue-800 transition-colors"
+              >
+                Yes, Continue
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
