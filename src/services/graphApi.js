@@ -47,6 +47,7 @@ async function getSolutionsDrive(accessToken) {
   return targetDrive;
 }
 
+const UPLOAD_PARENT = '04-Project Team';
 const UPLOAD_SUBFOLDER = '05-ISO Project Documents';
 
 async function checkFolderExists(accessToken, driveId, folderPath) {
@@ -62,14 +63,14 @@ async function checkFolderExists(accessToken, driveId, folderPath) {
 export async function checkProjectFolder(msalInstance, account, projectCode) {
   const accessToken = await acquireToken(msalInstance, account);
   const drive = await getSolutionsDrive(accessToken);
-  const folderPath = `General/${projectCode}/${UPLOAD_SUBFOLDER}`;
+  const folderPath = `General/${projectCode}/${UPLOAD_PARENT}/${UPLOAD_SUBFOLDER}`;
   return checkFolderExists(accessToken, drive.id, folderPath);
 }
 
 export async function createProjectFolder(msalInstance, account, projectCode) {
   const accessToken = await acquireToken(msalInstance, account);
   const drive = await getSolutionsDrive(accessToken);
-  const parentPath = `General/${projectCode}`;
+  const parentPath = `General/${projectCode}/${UPLOAD_PARENT}`;
 
   const response = await fetch(
     `${GRAPH_BASE_URL}/drives/${drive.id}/root:/${parentPath}:/children`,
@@ -99,7 +100,7 @@ export async function uploadToSharePoint(msalInstance, account, fileContent, fil
   const drive = await getSolutionsDrive(accessToken);
 
   // Check that the 05-ISO Project Documents folder exists
-  const folderPath = `General/${projectCode}/${UPLOAD_SUBFOLDER}`;
+  const folderPath = `General/${projectCode}/${UPLOAD_PARENT}/${UPLOAD_SUBFOLDER}`;
   const exists = await checkFolderExists(accessToken, drive.id, folderPath);
 
   if (!exists) {
@@ -143,7 +144,7 @@ export async function checkExistingAudit(msalInstance, account, projectCode) {
   const accessToken = await acquireToken(msalInstance, account);
   const drive = await getSolutionsDrive(accessToken);
 
-  const folderPath = `General/${projectCode}/${UPLOAD_SUBFOLDER}`;
+  const folderPath = `General/${projectCode}/${UPLOAD_PARENT}/${UPLOAD_SUBFOLDER}`;
 
   // Try to list contents of the 07-Audit Form folder
   const response = await fetch(
