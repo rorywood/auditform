@@ -159,7 +159,7 @@ function App() {
       const pdfBlob = await getPdfBlob(formData);
       const fileName = generateFileName(formData.projectInfo);
 
-      await uploadToSharePoint(instance, account, pdfBlob, fileName);
+      await uploadToSharePoint(instance, account, pdfBlob, fileName, formData.projectInfo.projectCode);
       setUploadStatus('success');
       showMessage('Audit uploaded to SharePoint successfully', 'success');
     } catch (error) {
@@ -216,7 +216,7 @@ function App() {
       const pdfBlob = await getPdfBlob(formData);
       const fileName = generateFileName(formData.projectInfo);
 
-      await uploadToSharePoint(instance, account, pdfBlob, fileName);
+      await uploadToSharePoint(instance, account, pdfBlob, fileName, formData.projectInfo.projectCode);
       setUploadStatus('success');
     } catch (error) {
       console.error('Upload error:', error);

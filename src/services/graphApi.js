@@ -25,36 +25,63 @@ export async function getUserProfile(msalInstance, account) {
   return callGraphApi(accessToken, '/me');
 }
 
-export async function uploadToSharePoint(msalInstance, account, fileContent, fileName) {
-  const accessToken = await acquireToken(msalInstance, account);
-
-  const siteUrl = graphConfig.sharepointSiteUrl;
-  const library = graphConfig.documentLibrary;
-  const folder = graphConfig.uploadFolder;
-
+async function getSolutionsDrive(accessToken) {
   const siteResponse = await callGraphApi(
     accessToken,
-    `/sites/${siteUrl}`
+    '/sites/powertectelecom.sharepoint.com:/sites/Solutions'
   );
-
-  const siteId = siteResponse.id;
 
   const drivesResponse = await callGraphApi(
     accessToken,
-    `/sites/${siteId}/drives`
+    `/sites/${siteResponse.id}/drives`
   );
 
   const targetDrive = drivesResponse.value.find(
-    (drive) => drive.name === library
+    (drive) => drive.name === 'Documents'
   );
 
   if (!targetDrive) {
-    throw new Error(`Document library "${library}" not found`);
+    throw new Error('Document library not found on Solutions site');
   }
 
-  // Upload to the specified folder
-  const folderPath = folder ? `${folder}/${fileName}` : fileName;
-  const uploadUrl = `/drives/${targetDrive.id}/root:/${folderPath}:/content`;
+  return targetDrive;
+}
+
+async function ensureFolderExists(accessToken, driveId, parentPath, folderName) {
+  const response = await fetch(
+    `${GRAPH_BASE_URL}/drives/${driveId}/root:/${parentPath}:/children`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: folderName,
+        folder: {},
+        '@microsoft.graph.conflictBehavior': 'fail',
+      }),
+    }
+  );
+
+  // 409 = folder already exists, which is fine
+  if (!response.ok && response.status !== 409) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error?.message || `Failed to create folder: ${response.status}`);
+  }
+}
+
+export async function uploadToSharePoint(msalInstance, account, fileContent, fileName, projectCode) {
+  const accessToken = await acquireToken(msalInstance, account);
+  const drive = await getSolutionsDrive(accessToken);
+
+  // Ensure "07-Audit Form" folder exists inside the project folder
+  const projectPath = `General/${projectCode}`;
+  await ensureFolderExists(accessToken, drive.id, projectPath, '07-Audit Form');
+
+  // Upload PDF into the 07-Audit Form folder
+  const filePath = `${projectPath}/07-Audit Form/${fileName}`;
+  const uploadUrl = `/drives/${drive.id}/root:/${filePath}:/content`;
 
   const uploadResponse = await fetch(`${GRAPH_BASE_URL}${uploadUrl}`, {
     method: 'PUT',
@@ -75,33 +102,11 @@ export async function uploadToSharePoint(msalInstance, account, fileContent, fil
 
 export async function getProjectFolders(msalInstance, account) {
   const accessToken = await acquireToken(msalInstance, account);
+  const drive = await getSolutionsDrive(accessToken);
 
-  // Get the Solutions site
-  const siteResponse = await callGraphApi(
-    accessToken,
-    '/sites/powertectelecom.sharepoint.com:/sites/Solutions'
-  );
-
-  const siteId = siteResponse.id;
-
-  // Get drives for the site
-  const drivesResponse = await callGraphApi(
-    accessToken,
-    `/sites/${siteId}/drives`
-  );
-
-  const targetDrive = drivesResponse.value.find(
-    (drive) => drive.name === 'Documents'
-  );
-
-  if (!targetDrive) {
-    throw new Error('Document library not found on Solutions site');
-  }
-
-  // List folders inside "General"
   const foldersResponse = await callGraphApi(
     accessToken,
-    `/drives/${targetDrive.id}/root:/General:/children?$filter=folder ne null&$select=name&$top=999&$orderby=name`
+    `/drives/${drive.id}/root:/General:/children?$filter=folder ne null&$select=name&$top=999&$orderby=name`
   );
 
   return foldersResponse.value.map((folder) => folder.name);
