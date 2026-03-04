@@ -140,49 +140,32 @@ export async function getProjectFolders(msalInstance, account) {
   return foldersResponse.value.map((folder) => folder.name);
 }
 
-export async function checkExistingAudit(msalInstance, account, projectCode) {
+export async function listFolderDocuments(msalInstance, account, projectCode) {
   const accessToken = await acquireToken(msalInstance, account);
   const drive = await getSolutionsDrive(accessToken);
 
-  // Check both new path (04-Project Team) and old path (root) for existing PDFs
-  const paths = [
-    `General/${projectCode}/${UPLOAD_PARENT}/${UPLOAD_SUBFOLDER}`,
-    `General/${projectCode}/${UPLOAD_SUBFOLDER}`,
-  ];
+  const folderPath = `General/${projectCode}/${UPLOAD_PARENT}/${UPLOAD_SUBFOLDER}`;
 
-  const allPdfs = [];
+  const response = await fetch(
+    `${GRAPH_BASE_URL}/drives/${drive.id}/root:/${folderPath}:/children?$select=name,file,lastModifiedDateTime,lastModifiedBy`,
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    }
+  );
 
-  for (const folderPath of paths) {
-    const response = await fetch(
-      `${GRAPH_BASE_URL}/drives/${drive.id}/root:/${folderPath}:/children?$select=name,file,lastModifiedDateTime,lastModifiedBy`,
-      {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      }
-    );
-
-    if (response.status === 404 || !response.ok) continue;
-
-    const data = await response.json();
-    const pdfs = (data.value || []).filter(
-      (item) => item.file && item.name.toLowerCase().endsWith('.pdf')
-    );
-    allPdfs.push(...pdfs);
+  if (response.status === 404 || !response.ok) {
+    return [];
   }
 
-  if (allPdfs.length === 0) {
-    return null;
-  }
-
-  const latest = allPdfs.sort(
-    (a, b) => new Date(b.lastModifiedDateTime) - new Date(a.lastModifiedDateTime)
-  )[0];
-
-  return {
-    fileName: latest.name,
-    lastModified: new Date(latest.lastModifiedDateTime).toLocaleDateString('en-AU'),
-    modifiedBy: latest.lastModifiedBy?.user?.displayName || 'Unknown',
-    count: allPdfs.length,
-  };
+  const data = await response.json();
+  return (data.value || [])
+    .filter((item) => item.file)
+    .map((item) => ({
+      name: item.name,
+      lastModified: new Date(item.lastModifiedDateTime).toLocaleDateString('en-AU'),
+      modifiedBy: item.lastModifiedBy?.user?.displayName || 'Unknown',
+      isAuditForm: item.name.toLowerCase().includes('_auditform_') && item.name.toLowerCase().endsWith('.pdf'),
+    }));
 }
 
 export function generateFileName(projectInfo) {
@@ -191,5 +174,5 @@ export function generateFileName(projectInfo) {
   const sanitizedSiteName = (siteName || 'Site').replace(/[^a-zA-Z0-9]/g, '');
   const dateStr = auditDate || new Date().toISOString().split('T')[0];
 
-  return `${sanitizedProjectCode}_${sanitizedSiteName}_${dateStr}.pdf`;
+  return `${sanitizedProjectCode}_${sanitizedSiteName}_AuditForm_${dateStr}.pdf`;
 }
