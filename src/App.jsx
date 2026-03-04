@@ -10,7 +10,7 @@ import { CabinetSection } from './sections/CabinetSection';
 import { DASSection } from './sections/DASSection';
 import { CommissioningSection } from './sections/CommissioningSection';
 import { ContractorSection } from './sections/ContractorSection';
-import { uploadToSharePoint, generateFileName, checkExistingAudit } from './services/graphApi';
+import { uploadToSharePoint, generateFileName, checkExistingAudit, checkProjectFolder, createProjectFolder } from './services/graphApi';
 import { downloadPdf, getPdfBlob } from './services/pdfGenerator';
 import { signIn, getActiveAccount } from './services/auth';
 import { loginRequest } from './config/msalConfig';
@@ -37,6 +37,7 @@ function App() {
   const [uploadStatus, setUploadStatus] = useState(null); // 'uploading', 'success', 'error'
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [existingAuditWarning, setExistingAuditWarning] = useState(null);
+  const [folderStatus, setFolderStatus] = useState(null); // null = not checked, 'checking', 'exists', 'missing', 'creating'
 
   // Auto sign-in with MSAL when app loads
   useEffect(() => {
@@ -89,20 +90,34 @@ function App() {
     resetForm,
   } = useFormData();
 
-  // Check for existing audit when project is selected
+  // Check for existing audit and folder when project is selected
   useEffect(() => {
     const projectCode = formData.projectInfo.projectCode;
     if (!projectCode || !isAuthReady) {
       setExistingAuditWarning(null);
+      setFolderStatus(null);
       return;
     }
 
     let cancelled = false;
 
     async function check() {
+      const account = getActiveAccount(instance);
+      if (!account) return;
+
+      // Check folder exists
+      setFolderStatus('checking');
       try {
-        const account = getActiveAccount(instance);
-        if (!account) return;
+        const exists = await checkProjectFolder(instance, account, projectCode);
+        if (!cancelled) {
+          setFolderStatus(exists ? 'exists' : 'missing');
+        }
+      } catch {
+        if (!cancelled) setFolderStatus('missing');
+      }
+
+      // Check for existing audit PDFs
+      try {
         const result = await checkExistingAudit(instance, account, projectCode);
         if (!cancelled) {
           setExistingAuditWarning(result);
@@ -252,23 +267,40 @@ function App() {
     }
   }, [validateForm, showMessage, getIncompleteItems, formData, isAuthenticated, instance]);
 
+  const handleCreateFolder = useCallback(async () => {
+    setFolderStatus('creating');
+    try {
+      const account = getActiveAccount(instance);
+      if (!account) throw new Error('Not signed in');
+      await createProjectFolder(instance, account, formData.projectInfo.projectCode);
+      setFolderStatus('exists');
+      showMessage('Folder created successfully', 'success');
+    } catch (error) {
+      console.error('Failed to create folder:', error);
+      setFolderStatus('missing');
+      showMessage(`Failed to create folder: ${error.message}`, 'error');
+    }
+  }, [instance, formData.projectInfo.projectCode, showMessage]);
+
   const handleResetForm = useCallback(() => {
     if (window.confirm('Are you sure you want to reset the form? All data will be lost.')) {
       resetForm();
       setActiveTab('project');
       setShowCompletionModal(false);
       setUploadStatus(null);
+      setFolderStatus(null);
+      setExistingAuditWarning(null);
       showMessage('Form has been reset', 'info');
     }
   }, [resetForm, showMessage]);
 
   const currentTabIndex = tabs.findIndex((tab) => tab.id === activeTab);
 
-  // Check if project info is complete
+  // Check if project info is complete (folder must also exist)
   const isProjectInfoComplete = useCallback(() => {
     const { projectCode, siteName, siteAddress, projectManager, auditor, auditDate } = formData.projectInfo;
-    return !!(projectCode && siteName && siteAddress && projectManager && auditor && auditDate);
-  }, [formData.projectInfo]);
+    return !!(projectCode && siteName && siteAddress && projectManager && auditor && auditDate && folderStatus === 'exists');
+  }, [formData.projectInfo, folderStatus]);
 
   // Check if a section is complete (all items answered AND all "No" items have notes)
   const isSectionComplete = useCallback((sectionId) => {
@@ -323,10 +355,20 @@ function App() {
 
   const goToNextTab = useCallback(() => {
     // Don't allow progressing past project info until it's complete
-    if (activeTab === 'project' && !isProjectInfoComplete()) {
-      validateForm();
-      showMessage('Please complete all project information before continuing', 'error');
-      return;
+    if (activeTab === 'project') {
+      if (folderStatus === 'missing') {
+        showMessage('The "05-ISO Project Documents" folder is missing. Please create it before continuing.', 'error');
+        return;
+      }
+      if (folderStatus === 'checking' || folderStatus === 'creating') {
+        showMessage('Please wait while the project folder is being checked', 'error');
+        return;
+      }
+      if (!isProjectInfoComplete()) {
+        validateForm();
+        showMessage('Please complete all project information before continuing', 'error');
+        return;
+      }
     }
 
     // Check audit sections for completion and notes
@@ -373,7 +415,44 @@ function App() {
               onUpdate={updateProjectInfo}
               errors={errors}
             />
-            {existingAuditWarning && (
+            {folderStatus === 'missing' && formData.projectInfo.projectCode && (
+              <div className="mt-4 bg-red-50 border border-red-300 rounded-lg p-4 flex items-start gap-3">
+                <svg className="h-6 w-6 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-red-800">Missing project folder</h3>
+                  <p className="text-sm text-red-700 mt-1">
+                    The folder "05-ISO Project Documents" does not exist for this project. You cannot continue until this folder is created.
+                  </p>
+                  <button
+                    onClick={handleCreateFolder}
+                    className="mt-3 px-4 py-2 bg-primary text-white text-sm rounded-md hover:bg-blue-800 transition-colors"
+                  >
+                    Create Folder
+                  </button>
+                </div>
+              </div>
+            )}
+            {folderStatus === 'creating' && formData.projectInfo.projectCode && (
+              <div className="mt-4 bg-blue-50 border border-blue-300 rounded-lg p-4 flex items-center gap-3">
+                <svg className="animate-spin h-5 w-5 text-primary flex-shrink-0" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                <p className="text-sm text-primary font-medium">Creating folder...</p>
+              </div>
+            )}
+            {folderStatus === 'checking' && formData.projectInfo.projectCode && (
+              <div className="mt-4 bg-gray-50 border border-gray-200 rounded-lg p-4 flex items-center gap-3">
+                <svg className="animate-spin h-5 w-5 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                <p className="text-sm text-gray-500">Checking project folder...</p>
+              </div>
+            )}
+            {existingAuditWarning && folderStatus === 'exists' && (
               <div className="mt-4 bg-amber-50 border border-amber-300 rounded-lg p-4 flex items-start gap-3">
                 <svg className="h-6 w-6 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />

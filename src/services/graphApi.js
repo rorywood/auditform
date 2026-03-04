@@ -59,6 +59,41 @@ async function checkFolderExists(accessToken, driveId, folderPath) {
   return response.ok;
 }
 
+export async function checkProjectFolder(msalInstance, account, projectCode) {
+  const accessToken = await acquireToken(msalInstance, account);
+  const drive = await getSolutionsDrive(accessToken);
+  const folderPath = `General/${projectCode}/${UPLOAD_SUBFOLDER}`;
+  return checkFolderExists(accessToken, drive.id, folderPath);
+}
+
+export async function createProjectFolder(msalInstance, account, projectCode) {
+  const accessToken = await acquireToken(msalInstance, account);
+  const drive = await getSolutionsDrive(accessToken);
+  const parentPath = `General/${projectCode}`;
+
+  const response = await fetch(
+    `${GRAPH_BASE_URL}/drives/${drive.id}/root:/${parentPath}:/children`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: UPLOAD_SUBFOLDER,
+        folder: {},
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error?.message || `Failed to create folder: ${response.status}`);
+  }
+
+  return true;
+}
+
 export async function uploadToSharePoint(msalInstance, account, fileContent, fileName, projectCode) {
   const accessToken = await acquireToken(msalInstance, account);
   const drive = await getSolutionsDrive(accessToken);
