@@ -165,7 +165,7 @@ export function ProjectCodeSelect({ value, onChange, error }) {
       </div>
 
       {loadError && (
-        <p className="mt-1 text-xs text-amber-600">{loadError} - you can type a project code manually</p>
+        <p className="mt-1 text-xs text-amber-600">{loadError} - you can type a project number manually</p>
       )}
 
       {isOpen && !isLoading && filteredFolders.length > 0 && (

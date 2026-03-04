@@ -123,7 +123,7 @@ function App() {
     const newErrors = {};
     const { projectCode, siteName, siteAddress, projectManager, auditor, auditDate } = formData.projectInfo;
 
-    if (!projectCode) newErrors.projectCode = 'Project code is required';
+    if (!projectCode) newErrors.projectCode = 'Project number is required';
     if (!siteName) newErrors.siteName = 'Site name is required';
     if (!siteAddress) newErrors.siteAddress = 'Site address is required';
     if (!projectManager) newErrors.projectManager = 'Project manager is required';

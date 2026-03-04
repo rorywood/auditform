@@ -20,13 +20,13 @@ export function ProjectInfoForm({ projectInfo, onUpdate, errors }) {
 
       <div className="p-3 sm:p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-          {/* Project Code - searchable dropdown */}
+          {/* Project Number - searchable dropdown */}
           <div className="min-w-0">
             <label
               htmlFor="projectCode"
               className="block text-sm font-medium text-gray-700 mb-1"
             >
-              Project Code
+              Project Number
               <span className="text-noncompliant ml-1">*</span>
             </label>
             <ProjectCodeSelect
