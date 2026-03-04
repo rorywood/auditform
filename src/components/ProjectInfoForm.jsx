@@ -1,6 +1,7 @@
+import { ProjectCodeSelect } from './ProjectCodeSelect';
+
 export function ProjectInfoForm({ projectInfo, onUpdate, errors }) {
   const fields = [
-    { id: 'projectCode', label: 'Project Code', type: 'text', required: true },
     { id: 'siteName', label: 'Site Name', type: 'text', required: true },
     { id: 'siteAddress', label: 'Site Address', type: 'text', required: true },
     { id: 'projectManager', label: 'Project Manager', type: 'text', required: true },
@@ -19,6 +20,26 @@ export function ProjectInfoForm({ projectInfo, onUpdate, errors }) {
 
       <div className="p-3 sm:p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+          {/* Project Code - searchable dropdown */}
+          <div className="min-w-0">
+            <label
+              htmlFor="projectCode"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Project Code
+              <span className="text-noncompliant ml-1">*</span>
+            </label>
+            <ProjectCodeSelect
+              value={projectInfo.projectCode || ''}
+              onChange={(val) => onUpdate('projectCode', val)}
+              error={errors?.projectCode}
+            />
+            {errors?.projectCode && (
+              <p className="mt-1 text-sm text-noncompliant">{errors.projectCode}</p>
+            )}
+          </div>
+
+          {/* Other fields */}
           {fields.map((field) => (
             <div key={field.id} className="min-w-0">
               <label

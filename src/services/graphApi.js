@@ -73,6 +73,40 @@ export async function uploadToSharePoint(msalInstance, account, fileContent, fil
   return uploadResponse.json();
 }
 
+export async function getProjectFolders(msalInstance, account) {
+  const accessToken = await acquireToken(msalInstance, account);
+
+  // Get the Solutions site
+  const siteResponse = await callGraphApi(
+    accessToken,
+    '/sites/powertectelecom.sharepoint.com:/sites/Solutions'
+  );
+
+  const siteId = siteResponse.id;
+
+  // Get drives for the site
+  const drivesResponse = await callGraphApi(
+    accessToken,
+    `/sites/${siteId}/drives`
+  );
+
+  const targetDrive = drivesResponse.value.find(
+    (drive) => drive.name === 'Documents'
+  );
+
+  if (!targetDrive) {
+    throw new Error('Document library not found on Solutions site');
+  }
+
+  // List folders inside "General"
+  const foldersResponse = await callGraphApi(
+    accessToken,
+    `/drives/${targetDrive.id}/root:/General:/children?$filter=folder ne null&$select=name&$top=999&$orderby=name`
+  );
+
+  return foldersResponse.value.map((folder) => folder.name);
+}
+
 export function generateFileName(projectInfo) {
   const { projectCode, siteName, auditDate } = projectInfo;
   const sanitizedProjectCode = (projectCode || 'UNKNOWN').replace(/[^a-zA-Z0-9]/g, '');
