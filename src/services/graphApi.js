@@ -142,7 +142,7 @@ export async function getProjectFolders(msalInstance, account) {
 
 async function listChildren(accessToken, driveId, folderPath) {
   const response = await fetch(
-    `${GRAPH_BASE_URL}/drives/${driveId}/root:/${folderPath}:/children?$select=name,file,folder,lastModifiedDateTime,lastModifiedBy&$orderby=name`,
+    `${GRAPH_BASE_URL}/drives/${driveId}/root:/${folderPath}:/children?$select=name,file,folder,webUrl,lastModifiedDateTime,lastModifiedBy&$orderby=name`,
     {
       headers: { Authorization: `Bearer ${accessToken}` },
     }
@@ -176,6 +176,7 @@ export async function getProjectStructure(msalInstance, account, projectCode) {
     .filter((item) => item.file)
     .map((item) => ({
       name: item.name,
+      webUrl: item.webUrl,
       lastModified: new Date(item.lastModifiedDateTime).toLocaleDateString('en-AU'),
       modifiedBy: item.lastModifiedBy?.user?.displayName || 'Unknown',
       isAuditForm: item.name.toLowerCase().includes('_auditform_') && item.name.toLowerCase().endsWith('.pdf'),
