@@ -63,16 +63,8 @@ async function checkFolderExists(accessToken, driveId, folderPath) {
 export async function checkProjectFolder(msalInstance, account, projectCode) {
   const accessToken = await acquireToken(msalInstance, account);
   const drive = await getSolutionsDrive(accessToken);
-
-  // Check inside 04-Project Team first (preferred)
-  const primaryPath = `General/${projectCode}/${UPLOAD_PARENT}/${UPLOAD_SUBFOLDER}`;
-  if (await checkFolderExists(accessToken, drive.id, primaryPath)) {
-    return true;
-  }
-
-  // Fall back to root of project folder
-  const fallbackPath = `General/${projectCode}/${UPLOAD_SUBFOLDER}`;
-  return checkFolderExists(accessToken, drive.id, fallbackPath);
+  const folderPath = `General/${projectCode}/${UPLOAD_PARENT}/${UPLOAD_SUBFOLDER}`;
+  return checkFolderExists(accessToken, drive.id, folderPath);
 }
 
 export async function createProjectFolder(msalInstance, account, projectCode) {
@@ -107,16 +99,11 @@ export async function uploadToSharePoint(msalInstance, account, fileContent, fil
   const accessToken = await acquireToken(msalInstance, account);
   const drive = await getSolutionsDrive(accessToken);
 
-  // Check 04-Project Team path first, then fall back to root
-  const primaryPath = `General/${projectCode}/${UPLOAD_PARENT}/${UPLOAD_SUBFOLDER}`;
-  const fallbackPath = `General/${projectCode}/${UPLOAD_SUBFOLDER}`;
+  // Only upload to 04-Project Team/05-ISO Project Documents
+  const folderPath = `General/${projectCode}/${UPLOAD_PARENT}/${UPLOAD_SUBFOLDER}`;
+  const exists = await checkFolderExists(accessToken, drive.id, folderPath);
 
-  let folderPath;
-  if (await checkFolderExists(accessToken, drive.id, primaryPath)) {
-    folderPath = primaryPath;
-  } else if (await checkFolderExists(accessToken, drive.id, fallbackPath)) {
-    folderPath = fallbackPath;
-  } else {
+  if (!exists) {
     throw new Error(`The folder "${UPLOAD_SUBFOLDER}" does not exist for this project. Please create it before submitting.`);
   }
 
@@ -157,43 +144,38 @@ export async function checkExistingAudit(msalInstance, account, projectCode) {
   const accessToken = await acquireToken(msalInstance, account);
   const drive = await getSolutionsDrive(accessToken);
 
-  // Check both possible locations
-  const paths = [
-    `General/${projectCode}/${UPLOAD_PARENT}/${UPLOAD_SUBFOLDER}`,
-    `General/${projectCode}/${UPLOAD_SUBFOLDER}`,
-  ];
+  const folderPath = `General/${projectCode}/${UPLOAD_PARENT}/${UPLOAD_SUBFOLDER}`;
 
-  for (const folderPath of paths) {
-    const response = await fetch(
-      `${GRAPH_BASE_URL}/drives/${drive.id}/root:/${folderPath}:/children?$select=name,file,lastModifiedDateTime,lastModifiedBy`,
-      {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      }
-    );
-
-    if (response.status === 404) continue;
-    if (!response.ok) continue;
-
-    const data = await response.json();
-    const pdfs = (data.value || []).filter(
-      (item) => item.file && item.name.toLowerCase().endsWith('.pdf')
-    );
-
-    if (pdfs.length > 0) {
-      const latest = pdfs.sort(
-        (a, b) => new Date(b.lastModifiedDateTime) - new Date(a.lastModifiedDateTime)
-      )[0];
-
-      return {
-        fileName: latest.name,
-        lastModified: new Date(latest.lastModifiedDateTime).toLocaleDateString('en-AU'),
-        modifiedBy: latest.lastModifiedBy?.user?.displayName || 'Unknown',
-        count: pdfs.length,
-      };
+  const response = await fetch(
+    `${GRAPH_BASE_URL}/drives/${drive.id}/root:/${folderPath}:/children?$select=name,file,lastModifiedDateTime,lastModifiedBy`,
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
     }
+  );
+
+  if (response.status === 404 || !response.ok) {
+    return null;
   }
 
-  return null;
+  const data = await response.json();
+  const pdfs = (data.value || []).filter(
+    (item) => item.file && item.name.toLowerCase().endsWith('.pdf')
+  );
+
+  if (pdfs.length === 0) {
+    return null;
+  }
+
+  const latest = pdfs.sort(
+    (a, b) => new Date(b.lastModifiedDateTime) - new Date(a.lastModifiedDateTime)
+  )[0];
+
+  return {
+    fileName: latest.name,
+    lastModified: new Date(latest.lastModifiedDateTime).toLocaleDateString('en-AU'),
+    modifiedBy: latest.lastModifiedBy?.user?.displayName || 'Unknown',
+    count: pdfs.length,
+  };
 }
 
 export function generateFileName(projectInfo) {
