@@ -144,29 +144,36 @@ export async function checkExistingAudit(msalInstance, account, projectCode) {
   const accessToken = await acquireToken(msalInstance, account);
   const drive = await getSolutionsDrive(accessToken);
 
-  const folderPath = `General/${projectCode}/${UPLOAD_PARENT}/${UPLOAD_SUBFOLDER}`;
+  // Check both new path (04-Project Team) and old path (root) for existing PDFs
+  const paths = [
+    `General/${projectCode}/${UPLOAD_PARENT}/${UPLOAD_SUBFOLDER}`,
+    `General/${projectCode}/${UPLOAD_SUBFOLDER}`,
+  ];
 
-  const response = await fetch(
-    `${GRAPH_BASE_URL}/drives/${drive.id}/root:/${folderPath}:/children?$select=name,file,lastModifiedDateTime,lastModifiedBy`,
-    {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    }
-  );
+  const allPdfs = [];
 
-  if (response.status === 404 || !response.ok) {
+  for (const folderPath of paths) {
+    const response = await fetch(
+      `${GRAPH_BASE_URL}/drives/${drive.id}/root:/${folderPath}:/children?$select=name,file,lastModifiedDateTime,lastModifiedBy`,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }
+    );
+
+    if (response.status === 404 || !response.ok) continue;
+
+    const data = await response.json();
+    const pdfs = (data.value || []).filter(
+      (item) => item.file && item.name.toLowerCase().endsWith('.pdf')
+    );
+    allPdfs.push(...pdfs);
+  }
+
+  if (allPdfs.length === 0) {
     return null;
   }
 
-  const data = await response.json();
-  const pdfs = (data.value || []).filter(
-    (item) => item.file && item.name.toLowerCase().endsWith('.pdf')
-  );
-
-  if (pdfs.length === 0) {
-    return null;
-  }
-
-  const latest = pdfs.sort(
+  const latest = allPdfs.sort(
     (a, b) => new Date(b.lastModifiedDateTime) - new Date(a.lastModifiedDateTime)
   )[0];
 
@@ -174,7 +181,7 @@ export async function checkExistingAudit(msalInstance, account, projectCode) {
     fileName: latest.name,
     lastModified: new Date(latest.lastModifiedDateTime).toLocaleDateString('en-AU'),
     modifiedBy: latest.lastModifiedBy?.user?.displayName || 'Unknown',
-    count: pdfs.length,
+    count: allPdfs.length,
   };
 }
 
