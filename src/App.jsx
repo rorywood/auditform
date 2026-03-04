@@ -480,7 +480,10 @@ function App() {
                       </svg>
                       <span className="truncate">{doc.name}</span>
                       {doc.isAuditForm && (
-                        <span className="text-xs bg-compliant text-white px-1.5 py-0.5 rounded flex-shrink-0">Audit Form</span>
+                        <>
+                          <span className="text-xs text-green-600 flex-shrink-0">- {doc.modifiedBy}, {doc.lastModified}</span>
+                          <span className="text-xs bg-compliant text-white px-1.5 py-0.5 rounded flex-shrink-0">Audit Form</span>
+                        </>
                       )}
                     </li>
                   ))}
