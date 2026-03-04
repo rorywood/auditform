@@ -118,9 +118,9 @@ export async function checkExistingAudit(msalInstance, account, projectCode) {
 
   const folderPath = `General/${projectCode}/07-Audit Form`;
 
-  // Try to list files in the 07-Audit Form folder
+  // Try to list contents of the 07-Audit Form folder
   const response = await fetch(
-    `${GRAPH_BASE_URL}/drives/${drive.id}/root:/${folderPath}:/children?$filter=file ne null&$select=name,lastModifiedDateTime,lastModifiedBy`,
+    `${GRAPH_BASE_URL}/drives/${drive.id}/root:/${folderPath}:/children?$select=name,file,lastModifiedDateTime,lastModifiedBy`,
     {
       headers: { Authorization: `Bearer ${accessToken}` },
     }
@@ -136,7 +136,10 @@ export async function checkExistingAudit(msalInstance, account, projectCode) {
   }
 
   const data = await response.json();
-  const pdfs = data.value.filter((file) => file.name.toLowerCase().endsWith('.pdf'));
+  // Filter for PDF files only (items with a file facet and .pdf extension)
+  const pdfs = (data.value || []).filter(
+    (item) => item.file && item.name.toLowerCase().endsWith('.pdf')
+  );
 
   if (pdfs.length === 0) {
     return null;
