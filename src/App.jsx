@@ -71,6 +71,24 @@ function App() {
     initAuth();
   }, [instance]);
 
+  const {
+    formData,
+    updateProjectInfo,
+    setAuditItemStatus,
+    setAuditItemNotes,
+    updateSignoff,
+    getItemStatus,
+    getItemNotes,
+    getSectionProgress,
+    getOverallProgress,
+    getNonCompliantItems,
+    getNonCompliantWithoutNotes,
+    getIncompleteItems,
+    allAuditItemsComplete,
+    isFormValid,
+    resetForm,
+  } = useFormData();
+
   // Check for existing audit when project is selected
   useEffect(() => {
     const projectCode = formData.projectInfo.projectCode;
@@ -97,24 +115,6 @@ function App() {
     check();
     return () => { cancelled = true; };
   }, [formData.projectInfo.projectCode, isAuthReady, instance]);
-
-  const {
-    formData,
-    updateProjectInfo,
-    setAuditItemStatus,
-    setAuditItemNotes,
-    updateSignoff,
-    getItemStatus,
-    getItemNotes,
-    getSectionProgress,
-    getOverallProgress,
-    getNonCompliantItems,
-    getNonCompliantWithoutNotes,
-    getIncompleteItems,
-    allAuditItemsComplete,
-    isFormValid,
-    resetForm,
-  } = useFormData();
 
   const showMessage = useCallback((text, type = 'info') => {
     setMessage({ text, type });
