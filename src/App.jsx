@@ -10,7 +10,7 @@ import { CabinetSection } from './sections/CabinetSection';
 import { DASSection } from './sections/DASSection';
 import { CommissioningSection } from './sections/CommissioningSection';
 import { ContractorSection } from './sections/ContractorSection';
-import { uploadToSharePoint, generateFileName } from './services/graphApi';
+import { uploadToSharePoint, generateFileName, checkExistingAudit } from './services/graphApi';
 import { downloadPdf, getPdfBlob } from './services/pdfGenerator';
 import { signIn, getActiveAccount } from './services/auth';
 import { loginRequest } from './config/msalConfig';
@@ -36,6 +36,7 @@ function App() {
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [uploadStatus, setUploadStatus] = useState(null); // 'uploading', 'success', 'error'
   const [isAuthReady, setIsAuthReady] = useState(false);
+  const [existingAuditWarning, setExistingAuditWarning] = useState(null);
 
   // Auto sign-in with MSAL when app loads
   useEffect(() => {
@@ -69,6 +70,33 @@ function App() {
 
     initAuth();
   }, [instance]);
+
+  // Check for existing audit when project is selected
+  useEffect(() => {
+    const projectCode = formData.projectInfo.projectCode;
+    if (!projectCode || !isAuthReady) {
+      setExistingAuditWarning(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function check() {
+      try {
+        const account = getActiveAccount(instance);
+        if (!account) return;
+        const result = await checkExistingAudit(instance, account, projectCode);
+        if (!cancelled) {
+          setExistingAuditWarning(result);
+        }
+      } catch {
+        // Don't block the user if the check fails
+      }
+    }
+
+    check();
+    return () => { cancelled = true; };
+  }, [formData.projectInfo.projectCode, isAuthReady, instance]);
 
   const {
     formData,
@@ -339,11 +367,39 @@ function App() {
     switch (activeTab) {
       case 'project':
         return (
-          <ProjectInfoForm
-            projectInfo={formData.projectInfo}
-            onUpdate={updateProjectInfo}
-            errors={errors}
-          />
+          <>
+            <ProjectInfoForm
+              projectInfo={formData.projectInfo}
+              onUpdate={updateProjectInfo}
+              errors={errors}
+            />
+            {existingAuditWarning && (
+              <div className="mt-4 bg-amber-50 border border-amber-300 rounded-lg p-4 flex items-start gap-3">
+                <svg className="h-6 w-6 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+                <div>
+                  <h3 className="font-semibold text-amber-800">Audit already exists for this project</h3>
+                  <p className="text-sm text-amber-700 mt-1">
+                    {existingAuditWarning.count === 1
+                      ? `An audit form was submitted on ${existingAuditWarning.lastModified} by ${existingAuditWarning.modifiedBy}.`
+                      : `${existingAuditWarning.count} audit forms found. Most recent was submitted on ${existingAuditWarning.lastModified} by ${existingAuditWarning.modifiedBy}.`}
+                  </p>
+                  <p className="text-sm text-amber-600 mt-1">
+                    Submitting again will add another PDF to the project folder.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setExistingAuditWarning(null)}
+                  className="text-amber-400 hover:text-amber-600 flex-shrink-0"
+                >
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            )}
+          </>
         );
       case 'swms':
         return <SWMSSection {...sectionProps} />;

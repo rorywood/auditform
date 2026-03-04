@@ -112,6 +112,49 @@ export async function getProjectFolders(msalInstance, account) {
   return foldersResponse.value.map((folder) => folder.name);
 }
 
+export async function checkExistingAudit(msalInstance, account, projectCode) {
+  const accessToken = await acquireToken(msalInstance, account);
+  const drive = await getSolutionsDrive(accessToken);
+
+  const folderPath = `General/${projectCode}/07-Audit Form`;
+
+  // Try to list files in the 07-Audit Form folder
+  const response = await fetch(
+    `${GRAPH_BASE_URL}/drives/${drive.id}/root:/${folderPath}:/children?$filter=file ne null&$select=name,lastModifiedDateTime,lastModifiedBy`,
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    }
+  );
+
+  // 404 = folder doesn't exist, so no existing audit
+  if (response.status === 404) {
+    return null;
+  }
+
+  if (!response.ok) {
+    return null; // Don't block the user if the check fails
+  }
+
+  const data = await response.json();
+  const pdfs = data.value.filter((file) => file.name.toLowerCase().endsWith('.pdf'));
+
+  if (pdfs.length === 0) {
+    return null;
+  }
+
+  // Return info about the most recent PDF
+  const latest = pdfs.sort(
+    (a, b) => new Date(b.lastModifiedDateTime) - new Date(a.lastModifiedDateTime)
+  )[0];
+
+  return {
+    fileName: latest.name,
+    lastModified: new Date(latest.lastModifiedDateTime).toLocaleDateString('en-AU'),
+    modifiedBy: latest.lastModifiedBy?.user?.displayName || 'Unknown',
+    count: pdfs.length,
+  };
+}
+
 export function generateFileName(projectInfo) {
   const { projectCode, siteName, auditDate } = projectInfo;
   const sanitizedProjectCode = (projectCode || 'UNKNOWN').replace(/[^a-zA-Z0-9]/g, '');
