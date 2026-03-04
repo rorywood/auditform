@@ -593,8 +593,8 @@ function App() {
                   </p>
                   {(() => {
                     const account = getActiveAccount(instance);
-                    const name = account?.name?.toLowerCase() || '';
-                    const showGif = ['brodie tarrant', 'rory wood'].some(n => name.includes(n));
+                    const email = account?.username?.toLowerCase() || '';
+                    const showGif = ['rory.wood@powertec.com.au', 'brodie.tarrant@powertec.com.au'].includes(email);
                     return showGif ? (
                       <img
                         src="/surfing.gif"
