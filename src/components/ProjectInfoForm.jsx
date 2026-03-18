@@ -2,8 +2,6 @@ import { ProjectCodeSelect } from './ProjectCodeSelect';
 
 export function ProjectInfoForm({ projectInfo, onUpdate, errors }) {
   const fields = [
-    { id: 'siteName', label: 'Site Name', type: 'text', required: true },
-    { id: 'siteAddress', label: 'Site Address', type: 'text', required: true },
     { id: 'projectManager', label: 'Project Manager', type: 'text', required: true },
     { id: 'auditor', label: 'Auditor Name', type: 'text', required: true },
     { id: 'auditDate', label: 'Audit Date', type: 'date', required: true },

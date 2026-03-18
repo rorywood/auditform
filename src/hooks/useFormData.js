@@ -7,8 +7,6 @@ const STORAGE_KEY = 'powertec-audit-form-data';
 const initialFormData = {
   projectInfo: {
     projectCode: '',
-    siteName: '',
-    siteAddress: '',
     projectManager: '',
     auditor: '',
     auditDate: new Date().toISOString().split('T')[0],
@@ -188,8 +186,8 @@ export function useFormData() {
   }, [formData.auditItems]);
 
   const isFormValid = useMemo(() => {
-    const { projectCode, siteName, auditor, auditDate } = formData.projectInfo;
-    return !!(projectCode && siteName && auditor && auditDate);
+    const { projectCode, auditor, auditDate } = formData.projectInfo;
+    return !!(projectCode && auditor && auditDate);
   }, [formData.projectInfo]);
 
   const resetForm = useCallback(() => {

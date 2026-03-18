@@ -147,12 +147,10 @@ function App() {
   // Clear individual field errors when that field gets a value
   useEffect(() => {
     if (Object.keys(errors).length > 0) {
-      const { projectCode, siteName, siteAddress, projectManager, auditor, auditDate } = formData.projectInfo;
+      const { projectCode, projectManager, auditor, auditDate } = formData.projectInfo;
       const newErrors = { ...errors };
 
       if (projectCode && newErrors.projectCode) delete newErrors.projectCode;
-      if (siteName && newErrors.siteName) delete newErrors.siteName;
-      if (siteAddress && newErrors.siteAddress) delete newErrors.siteAddress;
       if (projectManager && newErrors.projectManager) delete newErrors.projectManager;
       if (auditor && newErrors.auditor) delete newErrors.auditor;
       if (auditDate && newErrors.auditDate) delete newErrors.auditDate;
@@ -165,11 +163,9 @@ function App() {
 
   const validateForm = useCallback(() => {
     const newErrors = {};
-    const { projectCode, siteName, siteAddress, projectManager, auditor, auditDate } = formData.projectInfo;
+    const { projectCode, projectManager, auditor, auditDate } = formData.projectInfo;
 
     if (!projectCode) newErrors.projectCode = 'Project number is required';
-    if (!siteName) newErrors.siteName = 'Site name is required';
-    if (!siteAddress) newErrors.siteAddress = 'Site address is required';
     if (!projectManager) newErrors.projectManager = 'Project manager is required';
     if (!auditor) newErrors.auditor = 'Auditor name is required';
     if (!auditDate) newErrors.auditDate = 'Audit date is required';
@@ -299,8 +295,8 @@ function App() {
 
   // Check if project info is complete (folder must also exist)
   const isProjectInfoComplete = useCallback(() => {
-    const { projectCode, siteName, siteAddress, projectManager, auditor, auditDate } = formData.projectInfo;
-    return !!(projectCode && siteName && siteAddress && projectManager && auditor && auditDate && folderStatus === 'exists');
+    const { projectCode, projectManager, auditor, auditDate } = formData.projectInfo;
+    return !!(projectCode && projectManager && auditor && auditDate && folderStatus === 'exists');
   }, [formData.projectInfo, folderStatus]);
 
   // Check if a section is complete (all items answered AND all "No" items have notes)
@@ -692,11 +688,9 @@ function App() {
             />
             <div className="min-w-0 flex-1">
               <h1 className="text-lg sm:text-2xl font-bold text-primary truncate">Projects Audit Form</h1>
-              {formData.projectInfo.projectCode && formData.projectInfo.siteName && (
+              {formData.projectInfo.projectCode && (
                 <p className="text-gray-600 text-xs sm:text-sm truncate">
                   <span className="text-gray-400">Project:</span> {formData.projectInfo.projectCode}
-                  <span className="mx-1 sm:mx-2 text-gray-300">|</span>
-                  <span className="text-gray-400">Site:</span> {formData.projectInfo.siteName}
                 </p>
               )}
             </div>
