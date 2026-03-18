@@ -9,7 +9,6 @@ export const auditSections = {
       { id: 'swms_5', label: 'Emergency procedures understood and documented' },
       { id: 'swms_8', label: 'PPE requirements documented and being followed' },
       { id: 'swms_11', label: 'Incident reporting procedures in place' },
-      { id: 'swms_12', label: 'Site diary being maintained' },
       { id: 'swms_13', label: 'Quality checklists completed' },
       { id: 'swms_14', label: 'As-built drawings updated' },
       { id: 'swms_15', label: 'Test results documented' },

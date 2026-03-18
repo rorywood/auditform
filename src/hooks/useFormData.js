@@ -7,6 +7,7 @@ const STORAGE_KEY = 'powertec-audit-form-data';
 const initialFormData = {
   projectInfo: {
     projectCode: '',
+    siteAddress: '',
     projectManager: '',
     auditor: '',
     auditDate: new Date().toISOString().split('T')[0],

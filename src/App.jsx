@@ -147,10 +147,11 @@ function App() {
   // Clear individual field errors when that field gets a value
   useEffect(() => {
     if (Object.keys(errors).length > 0) {
-      const { projectCode, projectManager, auditor, auditDate } = formData.projectInfo;
+      const { projectCode, siteAddress, projectManager, auditor, auditDate } = formData.projectInfo;
       const newErrors = { ...errors };
 
       if (projectCode && newErrors.projectCode) delete newErrors.projectCode;
+      if (siteAddress && newErrors.siteAddress) delete newErrors.siteAddress;
       if (projectManager && newErrors.projectManager) delete newErrors.projectManager;
       if (auditor && newErrors.auditor) delete newErrors.auditor;
       if (auditDate && newErrors.auditDate) delete newErrors.auditDate;
@@ -163,9 +164,10 @@ function App() {
 
   const validateForm = useCallback(() => {
     const newErrors = {};
-    const { projectCode, projectManager, auditor, auditDate } = formData.projectInfo;
+    const { projectCode, siteAddress, projectManager, auditor, auditDate } = formData.projectInfo;
 
     if (!projectCode) newErrors.projectCode = 'Project number is required';
+    if (!siteAddress) newErrors.siteAddress = 'Site location is required';
     if (!projectManager) newErrors.projectManager = 'Project manager is required';
     if (!auditor) newErrors.auditor = 'Auditor name is required';
     if (!auditDate) newErrors.auditDate = 'Audit date is required';
@@ -295,8 +297,8 @@ function App() {
 
   // Check if project info is complete (folder must also exist)
   const isProjectInfoComplete = useCallback(() => {
-    const { projectCode, projectManager, auditor, auditDate } = formData.projectInfo;
-    return !!(projectCode && projectManager && auditor && auditDate && folderStatus === 'exists');
+    const { projectCode, siteAddress, projectManager, auditor, auditDate } = formData.projectInfo;
+    return !!(projectCode && siteAddress && projectManager && auditor && auditDate && folderStatus === 'exists');
   }, [formData.projectInfo, folderStatus]);
 
   // Check if a section is complete (all items answered AND all "No" items have notes)

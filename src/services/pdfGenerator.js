@@ -118,6 +118,7 @@ export async function generateAuditPdf(formData) {
   function drawProjectInfo(info) {
     const fields = [
       { label: 'Project Number', value: info.projectCode },
+      { label: 'Site Location', value: info.siteAddress },
       { label: 'Project Manager', value: info.projectManager },
       { label: 'Auditor', value: info.auditor },
       { label: 'Audit Date', value: info.auditDate },
